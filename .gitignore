@@ -1,3 +1,9 @@
+# Dev tools - not needed for deployment
+Imagine/
+RawTileArt/
+tools/
+.cursorrules
+
 # API Keys and Secrets - NEVER commit these
 *api_key*.txt
 *.key
