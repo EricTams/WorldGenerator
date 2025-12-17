@@ -1,0 +1,46 @@
+#!/usr/bin/env zsh
+
+# Find the directory where this script is located
+SCRIPT_DIR="${0:A:h}"
+VENV_DIR="${SCRIPT_DIR}/.venv"
+
+# Find Python executable
+if command -v python3.11 &> /dev/null; then
+    PYTHON_CMD="python3.11"
+elif command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &> /dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "Error: Python not found. Please install Python 3.x"
+    exit 1
+fi
+
+# Create virtual environment if it doesn't exist
+if [[ ! -d "${VENV_DIR}" ]]; then
+    echo "Creating virtual environment..."
+    $PYTHON_CMD -m venv "${VENV_DIR}"
+fi
+
+# Activate virtual environment
+source "${VENV_DIR}/bin/activate"
+
+# Install/update requirements only if needed
+if [[ -f "${SCRIPT_DIR}/requirements.txt" ]]; then
+    # Generate a hash of requirements file - works on both Linux (md5sum) and macOS (md5)
+    REQ_HASH=$(md5sum "${SCRIPT_DIR}/requirements.txt" 2>/dev/null || md5 -q "${SCRIPT_DIR}/requirements.txt")
+    HASH_FILE="${VENV_DIR}/.req_hash"
+
+    # Check if requirements need to be installed
+    if [[ ! -f "${HASH_FILE}" ]] || [[ "$(cat ${HASH_FILE})" != "${REQ_HASH}" ]]; then
+        echo "Installing/updating requirements..."
+        pip install -r "${SCRIPT_DIR}/requirements.txt" > /dev/null
+        echo "${REQ_HASH}" > "${HASH_FILE}"
+    fi
+fi
+
+# Run the imagine.py script with all arguments passed to this script
+"${PYTHON_CMD}" "${SCRIPT_DIR}/imagine.py" "$@"
+
+# Deactivate virtual environment
+deactivate

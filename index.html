@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Generator - Puzzle Dungeon</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/blocks.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Toggle button for editor panel -->
+        <button id="btn-toggle-editor" class="btn btn-icon">▶</button>
+        
+        <!-- Editor Panel (collapsible) -->
+        <div id="editor-panel" class="editor-panel">
+            <div class="editor-header">
+                <h2>Generation Rules</h2>
+                <div class="editor-controls">
+                    <button id="btn-save" class="btn btn-primary">Save</button>
+                    <button id="btn-load" class="btn btn-secondary">Load</button>
+                    <button id="btn-export" class="btn btn-secondary">Export JSON</button>
+                    <button id="btn-import" class="btn btn-secondary">Import JSON</button>
+                </div>
+            </div>
+            
+            <!-- Biomes: Each has spawn conditions + tile rules -->
+            <div class="editor-section">
+                <div class="section-header">
+                    <h3>Biomes</h3>
+                    <button id="btn-add-biome" class="btn btn-small">+ Add</button>
+                </div>
+                <div id="biomes-list" class="biome-list">
+                    <!-- Biome cards -->
+                </div>
+            </div>
+            
+            <!-- Tile Rules: Within selected biome -->
+            <div class="editor-section tile-rules-section">
+                <div class="section-header">
+                    <h3>Tile Rules</h3>
+                    <button id="btn-add-tile-rule" class="btn btn-small">+ Add</button>
+                </div>
+                <div id="tile-rules-list" class="rules-list">
+                    <!-- Tile rule cards for selected biome -->
+                </div>
+                <p class="hint-text">Select a biome to see its tile rules</p>
+            </div>
+            
+            <!-- Inline Rule Editor (replaces modal) -->
+            <div id="rule-editor" class="editor-section rule-editor hidden">
+                <div class="section-header">
+                    <h3 id="editor-title">Edit Rule</h3>
+                    <button id="btn-close-editor" class="btn btn-small btn-icon">✕</button>
+                </div>
+                
+                <!-- Rule name -->
+                <div class="editor-field">
+                    <label>Name:</label>
+                    <input type="text" id="editor-rule-name" class="editor-input">
+                </div>
+                
+                <!-- Tile selection -->
+                <div id="editor-tile-section" class="editor-field">
+                    <label>Tile:</label>
+                    <select id="editor-tile-select" class="editor-select"></select>
+                </div>
+                
+                <!-- Layer selection -->
+                <div id="editor-layer-section" class="editor-field">
+                    <label>Layer:</label>
+                    <select id="editor-layer-select" class="editor-select">
+                        <option value="fg">Foreground</option>
+                        <option value="bg">Background</option>
+                    </select>
+                </div>
+                
+                <!-- Conditions (block editor) -->
+                <div class="editor-field editor-field-grow">
+                    <label>Conditions:</label>
+                    <div id="block-editor" class="block-editor">
+                        <div id="block-workspace" class="block-workspace"></div>
+                        <div id="block-palette" class="block-palette"></div>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="editor-actions">
+                    <button id="btn-delete-rule" class="btn btn-danger btn-small">Delete</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Biome Spawn Conditions Modal (kept for biome editing) -->
+        <div id="rule-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Edit Biome</h3>
+                    <button id="btn-modal-close" class="btn btn-icon">✕</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Biome name -->
+                    <div class="modal-field">
+                        <label>Name:</label>
+                        <input type="text" id="modal-rule-name" class="modal-input">
+                    </div>
+                    
+                    <!-- Biome icon -->
+                    <div id="modal-target-section" class="modal-field">
+                        <label id="modal-target-label">Icon:</label>
+                        <select id="modal-target-select" class="modal-select"></select>
+                    </div>
+                    
+                    <!-- Hidden layer section (not used for biomes) -->
+                    <div id="modal-layer-section" class="modal-field hidden">
+                        <label>Layer:</label>
+                        <select id="modal-layer-select" class="modal-select">
+                            <option value="fg">Foreground</option>
+                            <option value="bg">Background</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Spawn Conditions -->
+                    <div class="modal-field">
+                        <label>Spawn Conditions:</label>
+                        <div id="modal-block-editor" class="block-editor">
+                            <div id="modal-block-workspace" class="block-workspace"></div>
+                            <div id="modal-block-palette" class="block-palette"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-modal-delete" class="btn btn-danger">Delete</button>
+                    <div class="modal-footer-right">
+                        <button id="btn-modal-cancel" class="btn btn-secondary">Cancel</button>
+                        <button id="btn-modal-save" class="btn btn-primary">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Generation Controls -->
+        <div id="gen-controls" class="gen-controls">
+            <label>
+                Seed: <input type="text" id="seed-input" value="12345" size="10">
+            </label>
+            <button id="btn-regenerate" class="btn btn-primary">Regenerate</button>
+            <span class="control-divider">|</span>
+            <button id="btn-biome-overlay" class="btn btn-secondary btn-small">Biomes</button>
+            <select id="noise-overlay-select" class="noise-select">
+                <option value="">Noise: Off</option>
+                <option value="dynamic">Dynamic (hover)</option>
+                <option value="biome_noise">biome_noise</option>
+                <option value="cave_noise">cave_noise</option>
+                <option value="detail_noise">detail_noise</option>
+                <option value="depth">depth</option>
+            </select>
+        </div>
+        
+        <!-- Overlay Canvas -->
+        <canvas id="overlay-canvas" class="overlay-canvas"></canvas>
+        
+        <!-- Status Bar -->
+        <div id="status-bar" class="status-bar">
+            <span id="status-coords">X: 0, Y: 0</span>
+            <span id="status-tile">Tile: -</span>
+            <span id="status-biome">Biome: -</span>
+            <span id="status-overlay" class="status-overlay"></span>
+            <span id="status-fps">FPS: 0</span>
+        </div>
+    </div>
+    
+    <!-- Hidden file input for JSON import -->
+    <input type="file" id="import-file" accept=".json" style="display: none;">
+
+    <!-- Game modules - order matters for dependencies -->
+    <script src="assets/tile_atlas_data.js"></script>
+    <script src="src/noise.js"></script>
+    <script src="src/biome_data.js"></script>
+    <script src="src/dungeon.js"></script>
+    <script src="src/world.js"></script>
+    <script src="src/camera.js"></script>
+    <script src="src/input.js"></script>
+    <script src="src/player.js"></script>
+    <script src="src/renderer.js"></script>
+    <script src="src/editor/blocks.js"></script>
+    <script src="src/editor/tile_palette.js"></script>
+    <script src="src/editor/biome_editor.js"></script>
+    <script src="src/editor/persistence.js"></script>
+    <script src="src/game_loop.js"></script>
+    <script src="src/game.js"></script>
+</body>
+</html>
+

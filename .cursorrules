@@ -1,0 +1,231 @@
+# Cursor Rules for WorldGenerator - Procedural Puzzle-Dungeon Generator
+# Adapted for Windows development in Cursor, targeting GitHub Pages deployment
+
+## Project Context
+- HTML5 game development for web browsers
+- Target deployment: GitHub Pages
+- Development environment: Windows with Cursor IDE
+- Game type: Procedural puzzle-dungeon generator with visual room editor
+- Room-based generation with corridors, platforms, interactive elements
+- 16x16 pixel art tileset (48 tiles) rendered via WebGL
+- Scratch-style visual programming for defining room types
+
+## 1. MUST Requirements
+
+### 1.1 Simplicity and Clarity
+MUST keep functions under 20 fucking lines whenever possible
+MUST use vanilla JavaScript over complex frameworks unless absolutely necessary
+MUST make game logic obvious with clear names and consistent patterns
+MUST start with the dumbest fucking thing that could possibly work
+MUST use WebGL for tile rendering (single texture atlas, instanced quads)
+
+### 1.2 Explicit Design
+MUST pass all dependencies explicitly as parameters
+MUST make all game configuration values explicitly provided by caller or config
+MUST name all magic numbers (TILE_SIZE not 16, ROOM_MIN_WIDTH not 5)
+MUST return early to flatten logic and avoid deep nesting
+MUST define variables as close to their use as possible
+MUST use explicit event handling over global state
+
+### 1.3 Separation of Concerns
+MUST keep editor UI and game rendering separate and independent
+MUST separate rendering from dungeon generation logic completely
+MUST encapsulate individual game features into tiny fucking classes
+MUST use separate files for separate concerns (renderer.js, dungeon.js, editor/*.js)
+MUST use separate functions for separate concerns
+MUST isolate DOM manipulation (editor UI) from pure game logic (generation)
+
+### 1.4 Failure Handling
+MUST crash immediately with clear error message when tile atlas is missing
+MUST crash loudly and early in development when something's wrong
+MUST crash fast rather than hide bugs with fallbacks
+MUST crash with an error message for missing tile data or assets
+MUST validate world state before rendering
+
+### 1.5 Data and State Management
+MUST use real game assets and real game data only
+MUST wait until the exact moment something is needed to implement it
+MUST delete code immediately when it's no longer being used
+MUST use pure functions for generation logic whenever possible (same seed = same output)
+MUST minimize mutable state and isolate what remains
+MUST use immutable world state updates where practical
+
+### 1.6 Development Process
+MUST test the game in browser after making changes
+MUST use browser dev tools for debugging
+MUST validate HTML/CSS/JS syntax after changes
+MUST test generation and editor functionality manually after each change
+MUST ensure game works on GitHub Pages deployment
+
+### 1.7 HTML5 Game Specific
+MUST use semantic HTML structure
+MUST implement proper game loop with requestAnimationFrame
+MUST handle window resize events properly
+MUST use relative paths for assets (GitHub Pages compatibility)
+MUST implement proper mouse input handling for editor
+MUST use CSS for styling, JavaScript for logic
+MUST use JavaScript files (.js) for configuration data, NOT JSON files
+MUST avoid fetch() for local resources (CORS blocks file:// protocol)
+MUST ensure game works when opened directly from file system (double-click HTML)
+
+### 1.8 CRITICAL - WebGL Tile Rendering
+MUST use WebGL for ALL tile rendering (world, rooms, corridors)
+MUST use single texture atlas for all 48 tiles
+MUST NEVER use DOM elements for game world tiles
+MUST render everything game-related on WebGL canvas
+MUST only use DOM for editor UI (room type panel, block editor, tile palette)
+This ensures smooth rendering of large tile-based worlds
+
+### 1.9 Editor-Specific
+MUST use DOM for editor UI components (panels, buttons, drag-drop blocks)
+MUST keep editor state separate from world state
+MUST auto-save to localStorage on every meaningful change
+MUST support JSON export/import for room type definitions
+
+## 2. NEVER Requirements
+
+### 2.1 Complexity and Abstractions
+NEVER implement anything until it's actually fucking needed (YAGNI)
+NEVER add game engine abstractions until you have 3+ real use cases
+NEVER implement features "for later"
+NEVER add unused parameters, methods, or game objects
+NEVER use clever syntax when simple will do
+NEVER couple rendering and generation logic
+
+### 2.2 Defensive Programming
+NEVER write fallback code or default values for tile assets
+NEVER write code like "if (atlas == null) { useDefault() }"
+NEVER write "// Shouldn't happen, but just in case"
+NEVER silently recover from generation errors
+NEVER hide missing tile data with placeholders
+
+### 2.3 Hardcoded Values
+NEVER hardcode default values in constructors or functions
+NEVER assume "reasonable defaults" - make the caller fucking decide
+NEVER use magic numbers for tile sizes, room dimensions, or probabilities
+NEVER hardcode fallback values for tiles
+NEVER write sample room data or placeholder implementations
+
+### 2.4 Bad Practices
+NEVER maintain legacy codepaths
+NEVER keep code that isn't actively being used
+NEVER mock tile data
+NEVER write placeholder or memory implementations
+NEVER reach into global variables instead of explicit parameters
+NEVER commit API keys or secrets to the codebase
+NEVER use inline styles or scripts in HTML
+
+### 2.5 Code Smells
+NEVER allow change amplification (tiny feature touches many files)
+NEVER create high cognitive load (huge mental map required)
+NEVER leave unknown unknowns (unsure what must change)
+NEVER use shared mutable state between unrelated components
+NEVER create deep dependencies between editor and renderer
+NEVER stack if/else/switch into spaghetti control flow
+
+### 2.6 HTML5 Game Specific
+NEVER use global variables for world state
+NEVER mix generation logic with DOM manipulation
+NEVER use setTimeout/setInterval for game loops
+NEVER hardcode absolute paths for assets
+NEVER ignore browser compatibility issues
+NEVER use deprecated HTML5 APIs
+NEVER use fetch() or XMLHttpRequest for loading local config/data files
+NEVER create JSON config files that require fetch (causes CORS errors)
+
+### 2.7 CRITICAL - NEVER Use DOM for Tiles
+NEVER use DOM elements (divs, images) for dungeon tiles or world rendering
+NEVER animate tiles using CSS transitions or DOM manipulation
+NEVER mix WebGL rendering with DOM-based tiles
+NEVER use DOM positioning for world objects
+This causes performance issues with large tile-based worlds
+
+## 3. File Organization
+- index.html: Main game page
+- src/game.js: Core game controller and main loop
+- src/game_loop.js: RequestAnimationFrame loop management
+- src/renderer.js: WebGL tile rendering system
+- src/input.js: User input handling
+- src/camera.js: Pan/zoom camera controller
+- src/world.js: World data structure (rooms, corridors, tiles)
+- src/dungeon.js: Dungeon generation (room placement, corridors)
+- src/noise.js: Perlin noise for variation
+- src/player.js: Ghost player movement
+- src/room_data.js: Room type data structures
+- src/tile_data.js: Tile atlas coordinates
+- src/editor/blocks.js: Scratch-style logic block system
+- src/editor/room_editor.js: Visual room type editor panel
+- src/editor/tile_palette.js: Drag-drop tile assignment
+- src/editor/persistence.js: localStorage + JSON export/import
+- assets/tiles/atlas.png: Combined 48-tile texture atlas
+- assets/tile_atlas_data.js: Atlas UV coordinates
+- css/style.css: Main UI styling
+- css/blocks.css: Scratch-style block styling
+- tools/build_atlas.py: Script to combine tiles
+- RawTileArt/: Source 16x16 tiles (48 tiles)
+- Imagine/: AI asset generation tool
+
+## 4. GitHub Pages Considerations
+- Use relative paths for all assets
+- Ensure game works without server-side processing
+- Test game in incognito mode to verify no local dependencies
+- Use HTTPS-compatible APIs only
+- Optimize tile atlas for web delivery
+
+## 5. Windows/Cursor Specific
+- Use forward slashes in paths for cross-platform compatibility
+- Test game in multiple browsers (Chrome, Firefox, Edge)
+- Use Cursor's built-in terminal for any build processes
+- Leverage Cursor's IntelliSense for JavaScript development
+- Use Cursor's file explorer for asset management
+- MUST use PowerShell syntax for terminal commands (NOT bash)
+- NEVER use && or ; for command chaining (use separate commands or semicolons in PowerShell)
+- Use PowerShell-native commands (New-Item, Copy-Item, etc.) when appropriate
+
+## 6. Asset Generation
+MUST use the Imagine tool in Imagine/ folder for creating new tile assets
+MUST use build_atlas.py to combine tiles into single atlas.png
+MUST regenerate tile_atlas_data.js when adding new tiles
+MUST keep tiles at 16x16 pixel size
+MUST use consistent color palette across tile themes
+
+## 7. Comment Markers
+Add specially formatted comments throughout the codebase, where appropriate, for yourself as inline knowledge that can be easily `grep`ped for.
+- Use `AIDEV-NOTE:`, `AIDEV-TODO:`, or `AIDEV-QUESTION:` as prefix as appropriate.
+- *Important:* Before scanning files, always first try to grep for existing `AIDEV-…`.
+- Update relevant anchors, after finishing any task.
+- Make sure to add relevant anchor comments, whenever a file or piece of code is:
+  * too complex, or
+  * very important, or
+  * could have a bug
+
+## 8. Generation System
+AIDEV-NOTE: Dungeon generation is multi-pass
+- Room Placer: Places rectangular rooms
+- Corridor Builder: Connects rooms with hallways
+- Platform Placer: Adds ladders, platforms, stairs
+- Puzzle Placer: Distributes switches, buttons, power blocks
+- Hazard Placer: Adds thorns, slime pits
+- Decoration Pass: Stone carvings, pillars, smile blocks
+- Background Fill: BG and Far BG parallax tiles
+- Each pass can be influenced by room type definitions from editor
+
+## 9. Tile Categories (48 tiles)
+AIDEV-NOTE: Tile organization for the puzzle-platformer tileset
+- TERRAIN (7): Dirt, Dirt Grass, Dirt Bricks, Sand, Meteor Rock, Cloud, Slime
+- DUNGEON (11): Brick, Stone Carving 1/2/3, Pillar, Platform, Ladder, Stairs x4, Unbreakable Frame
+- MECHANICAL (10): Mechanical Tile, Electric Brick, Power Block, Button On/Off, Brick Switch On/Off, Pillar Switch On/Off, Pillar Switch Button On/Off
+- SPECIAL (6): Glass, Thorns, Smile Block, Melon, Piano, Brick Wall (Puzzle)
+- BACKGROUND (6): BG Brick/Fence/Pillar/Sand/Meteor/Thorns
+- FAR BACKGROUND (6): Far BG Brick/Fence/Pillar/Sand/Meteor/Thorns
+
+## 10. Editor Architecture
+AIDEV-NOTE: Visual room type editor uses Scratch-style blocks
+- Room types define: wall tiles, floor tiles, background, climbables, hazards, interactives, decorations
+- Spawn rules use visual logic blocks: depth, theme_noise, room_size, comparisons, AND/OR/NOT
+- Tile assignment uses probability weights (e.g., Brick 70%, Stone Carving 30%)
+- Editor is DOM-based, world rendering is WebGL-based
+- Keep these concerns strictly separated
+
+REMEMBER: One piece, one purpose. Simple first and foremost. Make the generation logic so fucking obvious that a five year old could understand it. WebGL for tiles, DOM only for editor UI. The game should work immediately when someone opens the HTML file.
+

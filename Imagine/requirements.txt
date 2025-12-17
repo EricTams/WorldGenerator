@@ -1,0 +1,6 @@
+openai>=1.0.0
+pillow>=9.0.0
+argparse>=1.4.0
+python-dotenv>=1.0.0
+requests>=2.0.0
+elevenlabs>=1.0.0

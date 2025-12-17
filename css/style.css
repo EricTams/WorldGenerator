@@ -1,0 +1,875 @@
+/* WorldGenerator - Main Stylesheet */
+/* Dark theme puzzle-dungeon generator UI */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Color palette - dark theme with blue/purple accents */
+    --bg-dark: #0d1117;
+    --bg-medium: #161b22;
+    --bg-light: #21262d;
+    --bg-hover: #30363d;
+    --border-color: #30363d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --accent-blue: #58a6ff;
+    --accent-purple: #a371f7;
+    --accent-green: #3fb950;
+    --accent-orange: #d29922;
+    --accent-red: #f85149;
+    
+    /* Sizes */
+    --editor-width: 480px;
+    --status-height: 28px;
+    --gen-controls-height: 44px;
+    --tile-preview-size: 32px;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-dark);
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Buttons */
+.btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-light);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-muted);
+}
+
+.btn-primary {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #4c9aed;
+    border-color: #4c9aed;
+}
+
+.btn-secondary {
+    background: var(--bg-medium);
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.btn-icon {
+    padding: 4px 8px;
+    font-size: 14px;
+}
+
+/* Editor Panel */
+.editor-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--editor-width);
+    height: calc(100% - var(--status-height));
+    background: var(--bg-medium);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: right 0.3s ease;
+    z-index: 100;
+}
+
+.editor-panel.collapsed {
+    right: calc(-1 * var(--editor-width));
+}
+
+/* Toggle button - floats outside the panel */
+#btn-toggle-editor {
+    position: fixed;
+    right: var(--editor-width);
+    top: 12px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px 0 0 6px;
+    background: var(--bg-medium);
+    border: 1px solid var(--border-color);
+    border-right: none;
+    z-index: 101;
+    transition: right 0.3s ease;
+}
+
+#btn-toggle-editor.panel-closed {
+    right: 0;
+}
+
+.editor-header {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-dark);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.editor-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.editor-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.editor-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+/* Tile rules section - takes remaining space and scrolls */
+.editor-section.tile-rules-section {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.editor-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.section-header h3 {
+    margin-bottom: 0;
+}
+
+/* Room Type List */
+.biome-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Rules list - vertical since order matters */
+.rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+}
+
+.hint-text {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+/* Rule card (for world rules and tile rules) */
+.rule-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.rule-card:hover {
+    border-color: var(--text-muted);
+}
+
+.rule-card.selected {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.rule-card .color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.rule-card .arrow {
+    color: var(--text-muted);
+}
+
+.rule-card .biome-name {
+    color: var(--text-muted);
+}
+
+.rule-card .rule-tile-preview {
+    width: 24px;
+    height: 24px;
+    background-color: var(--bg-dark);
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+/* Rule reorder buttons */
+.rule-reorder-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex-shrink: 0;
+}
+
+.btn-reorder {
+    width: 18px;
+    height: 14px;
+    padding: 0;
+    font-size: 8px;
+    line-height: 1;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.btn-reorder:hover:not(:disabled) {
+    background: var(--accent-blue);
+    color: white;
+    border-color: var(--accent-blue);
+}
+
+.btn-reorder:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Overlay canvas */
+.overlay-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 40; /* Below controls */
+}
+
+/* Control divider */
+.control-divider {
+    color: var(--text-muted);
+    margin: 0 4px;
+}
+
+/* Noise select dropdown */
+.noise-select {
+    background: var(--bg-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.noise-select:hover {
+    border-color: var(--text-muted);
+}
+
+/* Active overlay button */
+.btn-overlay-active {
+    background: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+.biome-card {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.biome-card:hover {
+    border-color: var(--text-muted);
+    background: var(--bg-hover);
+}
+
+.biome-card.selected {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.biome-card .icon {
+    font-size: 16px;
+}
+
+.biome-card .name {
+    font-size: 12px;
+    flex: 1;
+}
+
+.btn-edit-biome {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.biome-card:hover .btn-edit-biome {
+    opacity: 1;
+}
+
+.btn-edit-biome:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* Block Editor */
+.block-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.block-workspace {
+    min-height: 100px;
+    padding: 10px;
+    background: var(--bg-dark);
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+}
+
+.block-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Tile Assignment */
+.tile-assignment {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tile-layer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tile-layer-name {
+    width: 70px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.tile-layer-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex: 1;
+}
+
+.tile-slot {
+    width: var(--tile-preview-size);
+    height: var(--tile-preview-size);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-dark);
+    cursor: pointer;
+    image-rendering: pixelated;
+}
+
+.tile-slot:hover {
+    border-color: var(--accent-blue);
+}
+
+.tile-slot.add-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 18px;
+}
+
+/* Tile Palette */
+.tile-palette {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-preview-size), 1fr));
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+}
+
+.tile-palette-item {
+    width: var(--tile-preview-size);
+    height: var(--tile-preview-size);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: grab;
+    image-rendering: pixelated;
+    background-size: cover;
+}
+
+.tile-palette-item:hover {
+    border-color: var(--accent-blue);
+    transform: scale(1.1);
+}
+
+.tile-palette-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+/* Generation Controls */
+.gen-controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--bg-medium);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    z-index: 50;
+}
+
+.gen-controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.gen-controls input[type="text"],
+.gen-controls input[type="number"] {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.gen-controls input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+/* Status Bar */
+.status-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--status-height);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 16px;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-secondary);
+    z-index: 50;
+}
+
+.status-bar span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-overlay {
+    color: var(--accent-blue);
+    font-weight: 600;
+    background: rgba(88, 166, 255, 0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Category labels in tile palette */
+.tile-category {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-top: 4px;
+}
+
+.tile-category:first-child {
+    margin-top: 0;
+}
+
+/* =====================
+   MODAL STYLES
+   ===================== */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.modal.hidden,
+.hidden {
+    display: none !important;
+}
+
+.modal-content {
+    background: var(--bg-medium);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    width: 500px;
+    max-width: 90vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-field {
+    margin-bottom: 16px;
+}
+
+.modal-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.modal-input,
+.modal-select {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.modal-input:focus,
+.modal-select:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.modal-footer-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* Block editor in modal */
+.modal .block-editor {
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+}
+
+.modal .block-workspace {
+    min-height: 80px;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: var(--bg-light);
+    border-radius: 4px;
+}
+
+.modal .block-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Inline Rule Editor - takes over entire sidebar when active */
+.rule-editor {
+    background: var(--bg-dark);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.rule-editor.hidden {
+    display: none;
+}
+
+.rule-editor .section-header {
+    background: var(--bg-medium);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.rule-editor .section-header h3 {
+    font-size: 13px;
+    margin: 0;
+}
+
+.editor-field {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.editor-field label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.editor-input,
+.editor-select {
+    width: 100%;
+    padding: 6px 8px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.editor-input:focus,
+.editor-select:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+/* Block editor container - takes remaining space and scrolls */
+.editor-field-grow {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: 8px 12px;
+}
+
+.editor-field-grow .block-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--bg-medium);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.editor-field-grow .block-workspace {
+    flex: 1;
+    min-height: 80px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.editor-field-grow .block-palette {
+    flex-shrink: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 8px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-dark);
+}
+
+.editor-actions {
+    padding: 8px 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    background: var(--bg-medium);
+}
+
+/* Danger button */
+.btn-danger {
+    background: transparent;
+    color: var(--accent-red);
+    border: 1px solid var(--accent-red);
+}
+
+.btn-danger:hover {
+    background: var(--accent-red);
+    color: white;
+}
+
+/* Version controls */
+.version-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.btn-reset {
+    font-size: 11px;
+    padding: 4px 8px;
+    background: var(--bg-medium);
+    color: var(--text-secondary);
+}
+
+.btn-reset:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.btn-copy {
+    font-size: 11px;
+    padding: 4px 8px;
+    background: var(--bg-medium);
+    color: var(--text-secondary);
+}
+
+.btn-copy:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.btn-success {
+    background: var(--accent-green) !important;
+    color: white !important;
+    border-color: var(--accent-green) !important;
+}
+
+.version-warning {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-red);
+    background: rgba(248, 81, 73, 0.15);
+    padding: 3px 8px;
+    border-radius: 4px;
+    animation: pulse-warning 2s ease-in-out infinite;
+}
+
+.version-warning.hidden {
+    display: none;
+}
+
+@keyframes pulse-warning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+

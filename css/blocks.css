@@ -1,0 +1,560 @@
+/* WorldGenerator - Scratch-Style Block Styling */
+/* Visual programming blocks for spawn rules */
+
+:root {
+    /* Block colors by type */
+    --block-value: #5c81a6;
+    --block-value-dark: #4a6a8a;
+    --block-compare: #8b5cf6;
+    --block-compare-dark: #7c3aed;
+    --block-number: #10b981;
+    --block-number-dark: #059669;
+    --block-logic: #f59e0b;
+    --block-logic-dark: #d97706;
+    --block-context: #ec4899;
+    --block-context-dark: #db2777;
+    
+    /* Block dimensions */
+    --block-height: 28px;
+    --block-radius: 4px;
+    --block-notch-size: 6px;
+}
+
+/* Base block styling */
+.block {
+    display: inline-flex;
+    align-items: center;
+    height: var(--block-height);
+    padding: 0 10px;
+    border-radius: var(--block-radius);
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    cursor: grab;
+    user-select: none;
+    position: relative;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.block:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.block.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+    z-index: 1000;
+}
+
+/* Block types */
+.block-value {
+    background: var(--block-value);
+    border-bottom: 2px solid var(--block-value-dark);
+}
+
+/* Value block hover - glow effect for dynamic overlay feedback */
+.block-value:hover {
+    box-shadow: 0 0 12px rgba(92, 129, 166, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.block-compare {
+    background: var(--block-compare);
+    border-bottom: 2px solid var(--block-compare-dark);
+}
+
+.block-number {
+    background: var(--block-number);
+    border-bottom: 2px solid var(--block-number-dark);
+}
+
+.block-logic {
+    background: var(--block-logic);
+    border-bottom: 2px solid var(--block-logic-dark);
+}
+
+.block-context {
+    background: var(--block-context);
+    border-bottom: 2px solid var(--block-context-dark);
+}
+
+/* Block with input field */
+.block input {
+    width: 40px;
+    padding: 2px 4px;
+    margin-left: 4px;
+    border: none;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+    font-size: 12px;
+    text-align: center;
+}
+
+.block input:focus {
+    outline: none;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Container blocks (IF, AND, OR) */
+.block-container {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-light);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px;
+    min-width: 200px;
+}
+
+.block-container-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.block-container-header .block-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.block-container-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 34px;
+    padding: 6px;
+    background: var(--bg-dark);
+    border-radius: 4px;
+    border: 1px dashed var(--border-color);
+}
+
+/* Drop zone styling */
+.block-drop-zone {
+    min-width: 60px;
+    min-height: var(--block-height);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--block-radius);
+    background: rgba(255, 255, 255, 0.05);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.block-drop-zone.drag-over {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.1);
+}
+
+/* Condition row (for stacking conditions) */
+/* Uses CSS grid for fixed-width columns to ensure alignment */
+.condition-row {
+    display: grid;
+    grid-template-columns: 100px 70px 50px 1fr auto;
+    align-items: start;
+    gap: 8px;
+    padding: 6px 0;
+}
+
+.condition-row:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+}
+
+/* Modifiers chain container - fixed width, vertical stack */
+.modifiers-chain {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+}
+
+.modifiers-chain .block-modifier {
+    font-size: 10px;
+    padding: 2px 6px;
+    height: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+}
+
+.modifiers-chain .block-modifier-empty {
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 6px;
+    height: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+}
+
+/* Threshold input with slider */
+.threshold-input-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Slider with visible rail */
+.threshold-slider {
+    width: 60px;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border-color);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Track styling for webkit */
+.threshold-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(to right, var(--block-number-dark) 0%, var(--bg-light) 100%);
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+}
+
+.threshold-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--block-number);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    margin-top: -5px;
+    transition: transform 0.1s;
+}
+
+.threshold-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Track styling for Firefox */
+.threshold-slider::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(to right, var(--block-number-dark) 0%, var(--bg-light) 100%);
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+}
+
+.threshold-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--block-number);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.threshold-number {
+    width: 50px;
+    padding: 4px 6px;
+    font-size: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-darker);
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.threshold-number:focus {
+    outline: none;
+    border-color: var(--block-number);
+}
+
+/* Logic connector label */
+.logic-connector {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-orange);
+    text-transform: uppercase;
+    padding: 4px 8px;
+    background: rgba(245, 158, 11, 0.15);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+    white-space: nowrap;
+}
+
+.logic-connector:hover {
+    background: rgba(245, 158, 11, 0.25);
+}
+
+/* Block palette in editor */
+.block-palette {
+    padding: 8px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+}
+
+.block-palette-section {
+    margin-bottom: 10px;
+}
+
+.block-palette-section:last-child {
+    margin-bottom: 0;
+}
+
+.block-palette-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.block-palette-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* Small blocks in palette */
+.block-palette .block {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 11px;
+}
+
+/* Delete zone */
+.delete-zone {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 20px;
+    background: rgba(248, 81, 73, 0.1);
+    border: 2px dashed var(--accent-red);
+    border-radius: 6px;
+    color: var(--accent-red);
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.delete-zone.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.delete-zone.drag-over {
+    background: rgba(248, 81, 73, 0.2);
+}
+
+/* Expression builder - vertical layout with logic on top */
+.expression-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    min-height: 44px;
+}
+
+/* Logic connector at top */
+.expression-builder > .logic-connector {
+    align-self: flex-start;
+    margin-bottom: 4px;
+}
+
+/* Nested blocks display */
+.block-nested {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+/* Clickable blocks in condition rows */
+.block.clickable {
+    cursor: pointer;
+}
+
+.block.clickable:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+/* Block selector dropdown */
+.block-selector {
+    background: var(--bg-light, #2d2d2d);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    min-width: 120px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.block-selector-option {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.block-selector-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.block-selector-option.selected {
+    background: var(--accent-blue, #58a6ff);
+    color: white;
+}
+
+.block-selector-option:first-child {
+    border-radius: 5px 5px 0 0;
+}
+
+.block-selector-option:last-child {
+    border-radius: 0 0 5px 5px;
+}
+
+/* Modifier blocks */
+.block-modifier {
+    background: #10b981;
+    border-bottom: 2px solid #059669;
+    font-family: monospace;
+    min-width: 40px;
+    justify-content: center;
+}
+
+.block-modifier-empty {
+    background: #3f3f46;
+    border-bottom: 2px solid #27272a;
+    color: #71717a;
+    font-size: 10px;
+}
+
+.block-modifier-empty:hover {
+    background: #52525b;
+    color: #a1a1aa;
+}
+
+/* Modifier selector styling */
+.block-selector-modifier {
+    min-width: 200px;
+}
+
+.block-selector-modifier .desc {
+    font-size: 10px;
+    color: #888;
+    display: block;
+    margin-top: 2px;
+}
+
+.block-selector-remove {
+    color: #f87171 !important;
+    border-bottom: 1px solid #333;
+}
+
+.block-selector-remove:hover {
+    background: rgba(248, 113, 113, 0.15) !important;
+}
+
+/* Modifier input selector */
+.block-selector-input {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.block-selector-input input {
+    padding: 4px 6px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #1e1e1e;
+    color: white;
+    font-size: 12px;
+}
+
+.block-selector-input input:focus {
+    outline: none;
+    border-color: #10b981;
+}
+
+/* Scale block styling */
+.block-scale {
+    background: #f59e0b;
+    border-bottom: 2px solid #d97706;
+    font-family: monospace;
+    min-width: 40px;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.block-scale-empty {
+    background: #3f3f46;
+    border-bottom: 2px solid #27272a;
+    color: #71717a;
+    font-size: 10px;
+}
+
+.block-scale-empty:hover {
+    background: #52525b;
+    color: #a1a1aa;
+}
+
+/* Scale selector styling */
+.block-selector-scale {
+    min-width: 180px;
+    padding: 8px;
+}
+
+.block-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+}
+
+.block-selector-row label {
+    font-size: 12px;
+    color: #aaa;
+    width: 60px;
+}
+
+.block-selector-row input {
+    flex: 1;
+    padding: 4px 6px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #1e1e1e;
+    color: white;
+    font-size: 12px;
+}
+
+.block-selector-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 8px 0;
+}
+
+.block-selector-presets .btn {
+    font-size: 10px;
+    padding: 2px 6px;
+}
+
