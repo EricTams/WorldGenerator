@@ -26,16 +26,20 @@ const World = {
      * @param {Object} dungeonData
      */
     create(dungeonData) {
-        this.width = dungeonData.width;
-        this.height = dungeonData.height;
-        this.tiles = dungeonData.tiles;
-        this.bgTiles = dungeonData.bgTiles;
+        this.width = dungeonData.width || 0;
+        this.height = dungeonData.height || 0;
+        this.tiles = dungeonData.tiles || null;
+        this.bgTiles = dungeonData.bgTiles || null;
         this.biomeMap = dungeonData.biomeMap || null;
-        this.rooms = dungeonData.rooms;
-        this.corridors = dungeonData.corridors;
-        this.spawnPoint = dungeonData.spawnPoint;
+        this.rooms = dungeonData.rooms || [];
+        this.corridors = dungeonData.corridors || [];
+        this.spawnPoint = dungeonData.spawnPoint || { x: 0, y: 0 };
         
-        console.log(`World created: ${this.width}x${this.height}`);
+        if (this.width > 0 && this.height > 0) {
+            console.log(`World created: ${this.width}x${this.height}`);
+        } else {
+            console.log('World created: empty');
+        }
     },
     
     /**

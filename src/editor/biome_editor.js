@@ -8,6 +8,11 @@ const BiomeEditor = {
     tileRulesListEl: null,
     versionWarningEl: null,
     
+    // Rule loader elements
+    ruleLoaderEl: null,
+    editorContentEl: null,
+    rulesetTitleEl: null,
+    
     // Inline editor elements (for tile rules)
     editorEl: null,
     editorTitleEl: null,
@@ -39,12 +44,20 @@ const BiomeEditor = {
     PREVIEW_DELAY: 300, // ms delay before regenerating
     
     init() {
+        // Rule loader elements
+        this.ruleLoaderEl = document.getElementById('rule-loader');
+        this.editorContentEl = document.getElementById('editor-content');
+        this.rulesetTitleEl = document.getElementById('ruleset-title');
+        
+        // Set up rule loader buttons
+        this.setupRuleLoader();
+        
         // List elements
         this.biomesListEl = document.getElementById('biomes-list');
         this.tileRulesListEl = document.getElementById('tile-rules-list');
         
         // Sidebar sections (for hide/show during editing)
-        this.headerEl = document.querySelector('.editor-header');
+        this.headerEl = this.editorContentEl?.querySelector('.editor-header');
         this.biomesSectionEl = this.biomesListEl?.closest('.editor-section');
         this.tileRulesSectionEl = this.tileRulesListEl?.closest('.editor-section');
         
@@ -88,8 +101,112 @@ const BiomeEditor = {
             if (e.target === this.modalEl) this.closeModal();
         });
         
+        // Load button (return to rule selection)
+        document.getElementById('btn-load-rules')?.addEventListener('click', () => this.showRuleLoader());
+        
+        // Update UI based on whether rules are loaded
+        this.updateLoaderVisibility();
+        
         this.renderAll();
         console.log('BiomeEditor initialized');
+    },
+    
+    /**
+     * Set up rule loader button handlers
+     */
+    setupRuleLoader() {
+        // Show local button if local rules exist
+        const btnLocal = document.getElementById('btn-load-local');
+        if (btnLocal && Persistence.hasLocalRules()) {
+            btnLocal.classList.remove('hidden');
+        }
+        
+        // Local rules button
+        btnLocal?.addEventListener('click', () => {
+            Persistence.load();
+            this.onRulesLoaded();
+        });
+        
+        // Default Dungeon button
+        document.getElementById('btn-load-default')?.addEventListener('click', () => {
+            BiomeData.loadDefaultDungeon();
+            this.onRulesLoaded();
+        });
+        
+        // Generation Zoo button
+        document.getElementById('btn-load-zoo')?.addEventListener('click', () => {
+            BiomeData.loadGenerationZoo();
+            this.onRulesLoaded();
+        });
+        
+        // Import JSON button
+        document.getElementById('btn-load-import')?.addEventListener('click', () => {
+            document.getElementById('import-file')?.click();
+        });
+    },
+    
+    /**
+     * Called when rules are loaded - update UI and regenerate
+     */
+    onRulesLoaded() {
+        this.updateLoaderVisibility();
+        this.renderAll();
+        
+        // Regenerate world with new rules
+        if (typeof Game !== 'undefined' && Game.regenerate) {
+            Game.regenerate();
+        }
+    },
+    
+    /**
+     * Show the rule loader screen (keeps current world visible)
+     */
+    showRuleLoader() {
+        this.selectedBiome = null;
+        
+        // Show loader, hide editor content
+        this.ruleLoaderEl?.classList.remove('hidden');
+        this.editorContentEl?.classList.add('hidden');
+        
+        // Update local button visibility
+        const btnLocal = document.getElementById('btn-load-local');
+        if (btnLocal) {
+            if (Persistence.hasLocalRules()) {
+                btnLocal.classList.remove('hidden');
+            } else {
+                btnLocal.classList.add('hidden');
+            }
+        }
+    },
+    
+    /**
+     * Update visibility of rule loader vs editor content
+     */
+    updateLoaderVisibility() {
+        if (BiomeData.rulesLoaded) {
+            // Show editor content, hide loader
+            this.ruleLoaderEl?.classList.add('hidden');
+            this.editorContentEl?.classList.remove('hidden');
+            
+            // Update title with current rule set name
+            if (this.rulesetTitleEl && BiomeData.currentRuleSet) {
+                this.rulesetTitleEl.textContent = BiomeData.currentRuleSet;
+            }
+        } else {
+            // Show loader, hide editor content
+            this.ruleLoaderEl?.classList.remove('hidden');
+            this.editorContentEl?.classList.add('hidden');
+            
+            // Update local button visibility
+            const btnLocal = document.getElementById('btn-load-local');
+            if (btnLocal) {
+                if (Persistence.hasLocalRules()) {
+                    btnLocal.classList.remove('hidden');
+                } else {
+                    btnLocal.classList.add('hidden');
+                }
+            }
+        }
     },
     
     /**
@@ -335,7 +452,7 @@ const BiomeEditor = {
     },
     
     // =====================
-    // TILE RULES
+    // TILE RULES (with Group support)
     // =====================
     
     renderTileRules() {
@@ -347,21 +464,144 @@ const BiomeEditor = {
             return;
         }
         
-        const rules = BiomeData.getBiomeTileRules(this.selectedBiome.id);
-        const totalCount = rules.length;
-        rules.forEach((rule, index) => {
-            const card = this.createTileRuleCard(rule, index, totalCount);
-            this.tileRulesListEl.appendChild(card);
+        // Get raw rules (includes groups)
+        const items = BiomeData.getBiomeTileRulesRaw(this.selectedBiome.id);
+        const totalCount = items.length;
+        
+        items.forEach((item, index) => {
+            if (item.type === 'group') {
+                const groupEl = this.createGroupCard(item, index, totalCount);
+                this.tileRulesListEl.appendChild(groupEl);
+            } else {
+                const card = this.createTileRuleCard(item, index, totalCount, null);
+                this.tileRulesListEl.appendChild(card);
+            }
         });
     },
     
-    createTileRuleCard(rule, index, totalCount) {
+    /**
+     * Create a collapsible group card
+     */
+    createGroupCard(group, index, totalCount) {
+        const container = document.createElement('div');
+        container.className = 'rule-group';
+        container.dataset.groupId = group.id;
+        if (group.collapsed) {
+            container.classList.add('collapsed');
+        }
+        
+        // Group header
+        const header = document.createElement('div');
+        header.className = 'rule-group-header';
+        
+        // Collapse toggle
+        const toggle = document.createElement('span');
+        toggle.className = 'group-toggle';
+        toggle.textContent = group.collapsed ? '▶' : '▼';
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleGroup(group.id);
+        });
+        header.appendChild(toggle);
+        
+        // Group name
+        const name = document.createElement('span');
+        name.className = 'group-name';
+        name.textContent = group.name;
+        header.appendChild(name);
+        
+        // Rule count
+        const count = document.createElement('span');
+        count.className = 'group-count';
+        count.textContent = `(${group.rules?.length || 0})`;
+        header.appendChild(count);
+        
+        // Group actions
+        const actions = document.createElement('div');
+        actions.className = 'group-actions';
+        
+        // Move up
+        const upBtn = document.createElement('button');
+        upBtn.className = 'btn-reorder';
+        upBtn.textContent = '▲';
+        upBtn.title = 'Move group up';
+        upBtn.disabled = index === 0;
+        upBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.moveGroup(group.id, -1);
+        });
+        actions.appendChild(upBtn);
+        
+        // Move down
+        const downBtn = document.createElement('button');
+        downBtn.className = 'btn-reorder';
+        downBtn.textContent = '▼';
+        downBtn.title = 'Move group down';
+        downBtn.disabled = index === totalCount - 1;
+        downBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.moveGroup(group.id, 1);
+        });
+        actions.appendChild(downBtn);
+        
+        // Edit group name
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-group-action';
+        editBtn.textContent = '✎';
+        editBtn.title = 'Rename group';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.renameGroup(group.id);
+        });
+        actions.appendChild(editBtn);
+        
+        // Delete group
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-group-action btn-group-delete';
+        deleteBtn.textContent = '✕';
+        deleteBtn.title = 'Delete group';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteGroup(group.id);
+        });
+        actions.appendChild(deleteBtn);
+        
+        header.appendChild(actions);
+        container.appendChild(header);
+        
+        // Group content (rules inside)
+        const content = document.createElement('div');
+        content.className = 'rule-group-content';
+        
+        if (group.rules && group.rules.length > 0) {
+            group.rules.forEach((rule, ruleIndex) => {
+                const card = this.createTileRuleCard(rule, ruleIndex, group.rules.length, group.id);
+                content.appendChild(card);
+            });
+        } else {
+            const empty = document.createElement('p');
+            empty.className = 'hint-text';
+            empty.textContent = 'No rules in group';
+            content.appendChild(empty);
+        }
+        
+        container.appendChild(content);
+        return container;
+    },
+    
+    createTileRuleCard(rule, index, totalCount, groupId) {
         const card = document.createElement('div');
         card.className = 'rule-card';
+        if (groupId) {
+            card.classList.add('in-group');
+        }
         if (this.editingTileRule && this.editingTileRule.id === rule.id) {
             card.classList.add('selected');
         }
         card.dataset.ruleId = rule.id;
+        if (groupId) {
+            card.dataset.groupId = groupId;
+        }
         
         // Reorder buttons container
         const reorderBtns = document.createElement('div');
@@ -441,11 +681,116 @@ const BiomeEditor = {
         if (moved) {
             Persistence.markDirty();
             this.renderTileRules();
-            // Regenerate to show new rule order effect
             if (typeof Game !== 'undefined' && Game.regenerate) {
                 Game.regenerate();
             }
         }
+    },
+    
+    // =====================
+    // GROUP ACTIONS
+    // =====================
+    
+    /**
+     * Toggle group collapsed state
+     */
+    toggleGroup(groupId) {
+        if (!this.selectedBiome) return;
+        
+        const group = BiomeData.getGroup(this.selectedBiome.id, groupId);
+        if (group) {
+            BiomeData.updateGroup(this.selectedBiome.id, groupId, { collapsed: !group.collapsed });
+            this.renderTileRules();
+        }
+    },
+    
+    /**
+     * Move a group up or down
+     */
+    moveGroup(groupId, direction) {
+        if (!this.selectedBiome) return;
+        
+        const moved = BiomeData.moveGroup(this.selectedBiome.id, groupId, direction);
+        if (moved) {
+            Persistence.markDirty();
+            this.renderTileRules();
+            if (typeof Game !== 'undefined' && Game.regenerate) {
+                Game.regenerate();
+            }
+        }
+    },
+    
+    /**
+     * Rename a group
+     */
+    renameGroup(groupId) {
+        if (!this.selectedBiome) return;
+        
+        const group = BiomeData.getGroup(this.selectedBiome.id, groupId);
+        if (!group) return;
+        
+        const newName = prompt('Enter new group name:', group.name);
+        if (newName && newName.trim()) {
+            BiomeData.updateGroup(this.selectedBiome.id, groupId, { name: newName.trim() });
+            Persistence.markDirty();
+            this.renderTileRules();
+        }
+    },
+    
+    /**
+     * Delete a group (with confirmation)
+     */
+    deleteGroup(groupId) {
+        if (!this.selectedBiome) return;
+        
+        const group = BiomeData.getGroup(this.selectedBiome.id, groupId);
+        if (!group) return;
+        
+        const ruleCount = group.rules?.length || 0;
+        
+        if (ruleCount > 0) {
+            // Show modal with options
+            const choice = confirm(
+                `Delete group "${group.name}"?\n\n` +
+                `This group contains ${ruleCount} rule(s).\n\n` +
+                `Click OK to DELETE all rules in the group.\n` +
+                `Click Cancel to keep the rules (they will be ungrouped).`
+            );
+            
+            BiomeData.removeGroup(this.selectedBiome.id, groupId, choice);
+        } else {
+            BiomeData.removeGroup(this.selectedBiome.id, groupId, true);
+        }
+        
+        Persistence.markDirty();
+        this.renderTileRules();
+        
+        if (typeof Game !== 'undefined' && Game.regenerate) {
+            Game.regenerate();
+        }
+    },
+    
+    /**
+     * Add a new group
+     */
+    addNewGroup() {
+        if (!this.selectedBiome) {
+            alert('Select a biome first!');
+            return;
+        }
+        
+        const name = prompt('Enter group name:', 'New Group');
+        if (!name || !name.trim()) return;
+        
+        BiomeData.addGroup(this.selectedBiome.id, {
+            id: 'group_' + Date.now(),
+            name: name.trim(),
+            collapsed: false,
+            rules: []
+        });
+        
+        Persistence.markDirty();
+        this.renderTileRules();
     },
     
     // =====================

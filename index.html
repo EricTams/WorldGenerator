@@ -16,79 +16,122 @@
         
         <!-- Editor Panel (collapsible) -->
         <div id="editor-panel" class="editor-panel">
-            <div class="editor-header">
-                <h2>Generation Rules</h2>
-                <div class="editor-controls">
-                    <button id="btn-save" class="btn btn-primary">Save</button>
-                    <button id="btn-load" class="btn btn-secondary">Load</button>
-                    <button id="btn-export" class="btn btn-secondary">Export JSON</button>
-                    <button id="btn-import" class="btn btn-secondary">Import JSON</button>
+            <!-- Rule Loader (shown when no rules loaded) -->
+            <div id="rule-loader" class="rule-loader">
+                <div class="rule-loader-header">
+                    <h2>🎮 World Generator</h2>
+                    <p class="rule-loader-subtitle">Load a rule set to begin generating</p>
+                </div>
+                <div class="rule-loader-options">
+                    <button id="btn-load-local" class="btn btn-load-option btn-load-local hidden">
+                        <span class="load-option-icon">💾</span>
+                        <span class="load-option-text">
+                            <span class="load-option-title">Local</span>
+                            <span class="load-option-desc">Your saved rules</span>
+                        </span>
+                    </button>
+                    <button id="btn-load-default" class="btn btn-load-option">
+                        <span class="load-option-icon">🏰</span>
+                        <span class="load-option-text">
+                            <span class="load-option-title">Default Dungeon</span>
+                            <span class="load-option-desc">Cave exploration with biomes</span>
+                        </span>
+                    </button>
+                    <button id="btn-load-zoo" class="btn btn-load-option">
+                        <span class="load-option-icon">🦁</span>
+                        <span class="load-option-text">
+                            <span class="load-option-title">Generation Zoo</span>
+                            <span class="load-option-desc">Examples and tutorials</span>
+                        </span>
+                    </button>
+                    <button id="btn-load-import" class="btn btn-load-option btn-load-import">
+                        <span class="load-option-icon">📁</span>
+                        <span class="load-option-text">
+                            <span class="load-option-title">Import JSON</span>
+                            <span class="load-option-desc">Load from file</span>
+                        </span>
+                    </button>
                 </div>
             </div>
             
-            <!-- Biomes: Each has spawn conditions + tile rules -->
-            <div class="editor-section">
-                <div class="section-header">
-                    <h3>Biomes</h3>
-                    <button id="btn-add-biome" class="btn btn-small">+ Add</button>
+            <!-- Editor Content (shown when rules are loaded) -->
+            <div id="editor-content" class="editor-content hidden">
+                <div class="editor-header">
+                    <h2 id="ruleset-title">Generation Rules</h2>
+                    <div class="editor-controls">
+                        <button id="btn-load-rules" class="btn btn-secondary btn-small" title="Load different rules">Load</button>
+                        <button id="btn-save" class="btn btn-primary">Save</button>
+                        <button id="btn-export" class="btn btn-secondary">Export</button>
+                    </div>
                 </div>
-                <div id="biomes-list" class="biome-list">
-                    <!-- Biome cards -->
-                </div>
-            </div>
             
-            <!-- Tile Rules: Within selected biome -->
-            <div class="editor-section tile-rules-section">
-                <div class="section-header">
-                    <h3>Tile Rules</h3>
-                    <button id="btn-add-tile-rule" class="btn btn-small">+ Add</button>
-                </div>
-                <div id="tile-rules-list" class="rules-list">
-                    <!-- Tile rule cards for selected biome -->
-                </div>
-                <p class="hint-text">Select a biome to see its tile rules</p>
-            </div>
-            
-            <!-- Inline Rule Editor (replaces modal) -->
-            <div id="rule-editor" class="editor-section rule-editor hidden">
-                <div class="section-header">
-                    <h3 id="editor-title">Edit Rule</h3>
-                    <button id="btn-close-editor" class="btn btn-small btn-icon">✕</button>
-                </div>
-                
-                <!-- Rule name -->
-                <div class="editor-field">
-                    <label>Name:</label>
-                    <input type="text" id="editor-rule-name" class="editor-input">
-                </div>
-                
-                <!-- Tile selection -->
-                <div id="editor-tile-section" class="editor-field">
-                    <label>Tile:</label>
-                    <select id="editor-tile-select" class="editor-select"></select>
-                </div>
-                
-                <!-- Layer selection -->
-                <div id="editor-layer-section" class="editor-field">
-                    <label>Layer:</label>
-                    <select id="editor-layer-select" class="editor-select">
-                        <option value="fg">Foreground</option>
-                        <option value="bg">Background</option>
-                    </select>
-                </div>
-                
-                <!-- Conditions (block editor) -->
-                <div class="editor-field editor-field-grow">
-                    <label>Conditions:</label>
-                    <div id="block-editor" class="block-editor">
-                        <div id="block-workspace" class="block-workspace"></div>
-                        <div id="block-palette" class="block-palette"></div>
+                <!-- Biomes: Each has spawn conditions + tile rules -->
+                <div class="editor-section">
+                    <div class="section-header">
+                        <h3>Biomes</h3>
+                        <button id="btn-add-biome" class="btn btn-small">+ Add</button>
+                    </div>
+                    <div id="biomes-list" class="biome-list">
+                        <!-- Biome cards -->
                     </div>
                 </div>
                 
-                <!-- Actions -->
-                <div class="editor-actions">
-                    <button id="btn-delete-rule" class="btn btn-danger btn-small">Delete</button>
+                <!-- Tile Rules: Within selected biome -->
+                <div class="editor-section tile-rules-section">
+                    <div class="section-header">
+                        <h3>Tile Rules</h3>
+                        <div class="section-header-buttons">
+                            <button id="btn-add-group" class="btn btn-small btn-secondary">+ Group</button>
+                            <button id="btn-add-tile-rule" class="btn btn-small">+ Rule</button>
+                        </div>
+                    </div>
+                    <div id="tile-rules-list" class="rules-list">
+                        <!-- Tile rule cards for selected biome -->
+                    </div>
+                    <p class="hint-text">Select a biome to see its tile rules</p>
+                </div>
+            
+                <!-- Inline Rule Editor (replaces modal) -->
+                <div id="rule-editor" class="editor-section rule-editor hidden">
+                    <div class="section-header">
+                        <h3 id="editor-title">Edit Rule</h3>
+                        <button id="btn-close-editor" class="btn btn-small btn-icon">✕</button>
+                    </div>
+                    
+                    <!-- Rule name -->
+                    <div class="editor-field">
+                        <label>Name:</label>
+                        <input type="text" id="editor-rule-name" class="editor-input">
+                    </div>
+                    
+                    <!-- Tile selection -->
+                    <div id="editor-tile-section" class="editor-field">
+                        <label>Tile:</label>
+                        <select id="editor-tile-select" class="editor-select"></select>
+                    </div>
+                    
+                    <!-- Layer selection -->
+                    <div id="editor-layer-section" class="editor-field">
+                        <label>Layer:</label>
+                        <select id="editor-layer-select" class="editor-select">
+                            <option value="fg">Foreground</option>
+                            <option value="bg">Background</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Conditions (block editor) -->
+                    <div class="editor-field editor-field-grow">
+                        <label>Conditions:</label>
+                        <div id="block-editor" class="block-editor">
+                            <div id="block-workspace" class="block-workspace"></div>
+                            <div id="block-palette" class="block-palette"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="editor-actions">
+                        <button id="btn-delete-rule" class="btn btn-danger btn-small">Delete</button>
+                    </div>
                 </div>
             </div>
         </div>

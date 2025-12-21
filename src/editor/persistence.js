@@ -15,10 +15,11 @@ const Persistence = {
     
     /**
      * Initialize persistence system
+     * AIDEV-NOTE: Does NOT auto-load anymore - rules are loaded explicitly
      */
     init() {
-        // Try to load saved data
-        this.load();
+        // Check if we have saved data (but don't load it)
+        this.savedVersion = this.getSavedVersion();
         
         // Set up auto-save
         window.addEventListener('beforeunload', () => {
@@ -28,6 +29,35 @@ const Persistence = {
         });
         
         console.log('Persistence initialized');
+    },
+    
+    /**
+     * Check if there are local rules saved in localStorage
+     * @returns {boolean}
+     */
+    hasLocalRules() {
+        try {
+            return localStorage.getItem(this.STORAGE_KEY) !== null;
+        } catch (e) {
+            return false;
+        }
+    },
+    
+    /**
+     * Get the saved version number without loading the data
+     * @returns {number|null}
+     */
+    getSavedVersion() {
+        try {
+            const json = localStorage.getItem(this.STORAGE_KEY);
+            if (json) {
+                const data = JSON.parse(json);
+                return data.version ?? 1;
+            }
+        } catch (e) {
+            // Ignore errors
+        }
+        return null;
     },
     
     /**
@@ -89,6 +119,7 @@ const Persistence = {
     
     /**
      * Load from localStorage
+     * @returns {boolean} true if loaded successfully
      */
     load() {
         try {
@@ -99,8 +130,8 @@ const Persistence = {
                 // Extract version (default to 1 for old saves without version)
                 this.savedVersion = data.version ?? 1;
                 
-                // Import the biome data
-                BiomeData.importJSON(json);
+                // Import the biome data with 'Local' as the rule set name
+                BiomeData.importJSON(json, 'Local');
                 
                 console.log(`Biomes loaded from localStorage (v${this.savedVersion}, latest: v${BiomeData.DEFAULTS_VERSION})`);
                 
@@ -112,10 +143,13 @@ const Persistence = {
                 if (typeof BiomeEditor !== 'undefined' && BiomeEditor.refresh) {
                     BiomeEditor.refresh();
                 }
+                
+                return true;
             }
         } catch (e) {
             console.error('Failed to load:', e);
         }
+        return false;
     },
     
     /**
@@ -176,6 +210,19 @@ const Persistence = {
         };
         
         reader.readAsText(file);
+    },
+    
+    /**
+     * Clear all saved data from localStorage
+     */
+    clearLocal() {
+        try {
+            localStorage.removeItem(this.STORAGE_KEY);
+            this.savedVersion = null;
+            console.log('Cleared local storage');
+        } catch (e) {
+            console.error('Failed to clear:', e);
+        }
     },
     
     /**

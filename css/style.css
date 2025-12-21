@@ -193,6 +193,11 @@ html, body {
     margin-bottom: 0;
 }
 
+.section-header-buttons {
+    display: flex;
+    gap: 4px;
+}
+
 /* Room Type List */
 .biome-list {
     display: flex;
@@ -871,5 +876,221 @@ html, body {
 @keyframes pulse-warning {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
+}
+
+/* =====================
+   RULE LOADER STYLES
+   ===================== */
+
+.rule-loader {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    padding: 32px;
+    text-align: center;
+}
+
+.rule-loader.hidden {
+    display: none;
+}
+
+.rule-loader-header {
+    margin-bottom: 32px;
+}
+
+.rule-loader-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.rule-loader-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.rule-loader-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.btn-load-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.btn-load-option:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-blue);
+    transform: translateY(-2px);
+}
+
+.btn-load-option.hidden {
+    display: none;
+}
+
+.load-option-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.load-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.load-option-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.load-option-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.btn-load-local {
+    border-color: var(--accent-green);
+    background: rgba(63, 185, 80, 0.1);
+}
+
+.btn-load-local:hover {
+    background: rgba(63, 185, 80, 0.2);
+    border-color: var(--accent-green);
+}
+
+.btn-load-import {
+    border-style: dashed;
+}
+
+/* Editor content wrapper */
+.editor-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.editor-content.hidden {
+    display: none;
+}
+
+/* =====================
+   RULE GROUPS
+   ===================== */
+
+.rule-group {
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-dark);
+    overflow: hidden;
+}
+
+.rule-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-light);
+    cursor: pointer;
+    user-select: none;
+}
+
+.rule-group-header:hover {
+    background: var(--bg-hover);
+}
+
+.group-toggle {
+    color: var(--text-muted);
+    font-size: 10px;
+    width: 12px;
+    text-align: center;
+}
+
+.group-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.group-count {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.group-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.rule-group-header:hover .group-actions {
+    opacity: 1;
+}
+
+.btn-group-action {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    font-size: 11px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-group-action:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.btn-group-delete:hover {
+    background: var(--accent-red);
+    border-color: var(--accent-red);
+    color: white;
+}
+
+.rule-group-content {
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rule-group.collapsed .rule-group-content {
+    display: none;
+}
+
+/* Rules inside a group - slightly indented */
+.rule-card.in-group {
+    margin-left: 0;
+    background: var(--bg-medium);
+}
+
+.rule-card.in-group:hover {
+    background: var(--bg-hover);
 }
 

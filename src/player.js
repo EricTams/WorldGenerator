@@ -33,12 +33,29 @@ const Player = {
         this.y = y;
     },
     
+    // Jump distance in pixels (16 tiles * 16 pixels = one cell)
+    jumpDistance: 16 * 16,
+    
     /**
      * Update player movement
      * @param {number} dt - Delta time in seconds
      * @param {Object} input - Input handler
      */
     update(dt, input) {
+        // Jump keys (I,J,K,L) - hop by one cell (16 tiles)
+        if (input.isKeyPressed('i')) {
+            this.y -= this.jumpDistance;
+        }
+        if (input.isKeyPressed('k')) {
+            this.y += this.jumpDistance;
+        }
+        if (input.isKeyPressed('j')) {
+            this.x -= this.jumpDistance;
+        }
+        if (input.isKeyPressed('l')) {
+            this.x += this.jumpDistance;
+        }
+        
         // Get movement input
         const moveX = input.getHorizontal();
         const moveY = input.getVertical();
@@ -50,7 +67,7 @@ const Player = {
             const normalX = moveX / length;
             const normalY = moveY / length;
             
-            // Apply speed with shift boost
+            // Apply speed with modifier (Shift = 2x speed)
             let currentSpeed = this.speed;
             if (input.isKeyDown('shift')) {
                 currentSpeed *= 2;

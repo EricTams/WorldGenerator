@@ -5,8 +5,8 @@
 
 const Dungeon = {
     TILE_SIZE: 16,
-    WORLD_WIDTH: 80,
-    WORLD_HEIGHT: 80,
+    WORLD_WIDTH: 144,   // 8x8 grid of 16-tile cells = 128, plus margin
+    WORLD_HEIGHT: 144,
     
     // Noise scales
     BIOME_SCALE: 30,
@@ -51,9 +51,10 @@ const Dungeon = {
                     continue;
                 }
                 
-                // Step 2: Biome Rules - find which tiles
-                const fgRules = biome.tileRules.filter(r => r.layer === 'fg');
-                const bgRules = biome.tileRules.filter(r => r.layer === 'bg');
+                // Step 2: Biome Rules - find which tiles (use flattened rules to handle groups)
+                const allRules = BiomeData.getBiomeTileRules(biome.id);
+                const fgRules = allRules.filter(r => r.layer === 'fg');
+                const bgRules = allRules.filter(r => r.layer === 'bg');
                 
                 // Foreground tile (first match wins)
                 for (const rule of fgRules) {

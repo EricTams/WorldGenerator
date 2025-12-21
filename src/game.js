@@ -49,12 +49,12 @@ const Game = {
             this.player = Player;
             this.player.init(0, 0);
             
-            // Initialize biome data with defaults
+            // Initialize biome data (empty state - no rules loaded yet)
             BiomeData.init();
             
-            // Initialize world and generate dungeon
+            // Initialize world (empty until rules are loaded)
             this.world = World;
-            this.regenerate();
+            this.world.create({ tiles: [], bgTiles: [], biomeMap: [], spawnPoint: { x: 0, y: 0 } });
             
             // Set initial player position to spawn point
             if (this.world.spawnPoint) {
@@ -145,20 +145,20 @@ const Game = {
             });
         }
         
-        // Save/Load/Export/Import buttons
+        // Save/Export buttons
         document.getElementById('btn-save')?.addEventListener('click', () => Persistence.save());
-        document.getElementById('btn-load')?.addEventListener('click', () => Persistence.load());
         document.getElementById('btn-export')?.addEventListener('click', () => Persistence.exportJSON());
-        document.getElementById('btn-import')?.addEventListener('click', () => {
-            document.getElementById('import-file')?.click();
-        });
         
-        // File input for import
+        // File input for import (used by both rule loader and editor)
         document.getElementById('import-file')?.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 Persistence.importJSON(file);
                 e.target.value = ''; // Reset for next import
+                // Update editor visibility after import
+                if (typeof BiomeEditor !== 'undefined') {
+                    BiomeEditor.onRulesLoaded();
+                }
             }
         });
         
@@ -170,6 +170,11 @@ const Game = {
         // Add tile rule button
         document.getElementById('btn-add-tile-rule')?.addEventListener('click', () => {
             BiomeEditor.addNewTileRule();
+        });
+        
+        // Add group button
+        document.getElementById('btn-add-group')?.addEventListener('click', () => {
+            BiomeEditor.addNewGroup();
         });
         
         // Biome overlay toggle
@@ -206,6 +211,13 @@ const Game = {
      * This allows live preview of rule changes without jumping around
      */
     regenerate() {
+        // If no rules loaded, create empty world
+        if (!BiomeData.rulesLoaded) {
+            console.log('No rules loaded - creating empty world');
+            this.world.create({ tiles: [], bgTiles: [], biomeMap: [], spawnPoint: { x: 0, y: 0 } });
+            return;
+        }
+        
         console.log(`Regenerating dungeon with seed ${this.seed}, ${this.roomCount} rooms`);
         
         // Generate new dungeon
@@ -305,6 +317,24 @@ const Game = {
         if (fpsEl) {
             fpsEl.textContent = `FPS: ${GameLoop.getFPS()}`;
         }
+    },
+    
+    /**
+     * Navigate to a specific cell in the Generation Zoo
+     * AIDEV-NOTE: Helper for testing - call from browser console: Game.goToCell(6, 1)
+     * @param {number} col - Cell column (0-7)
+     * @param {number} row - Cell row (0-7)
+     */
+    goToCell(col, row) {
+        const CELL_SIZE = 16; // tiles per cell
+        const TILE_SIZE = 16; // pixels per tile
+        const x = col * CELL_SIZE * TILE_SIZE + (CELL_SIZE * TILE_SIZE / 2);
+        const y = row * CELL_SIZE * TILE_SIZE + (CELL_SIZE * TILE_SIZE / 2);
+        this.player.x = x;
+        this.player.y = y;
+        this.camera.setTarget(x, y);
+        this.camera.snapToTarget();
+        console.log(`Moved to cell (${col}, ${row})`);
     }
 };
 

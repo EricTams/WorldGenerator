@@ -352,6 +352,8 @@ const Renderer = {
         const ctx = this.overlayCtx;
         ctx.clearRect(0, 0, this.width, this.height);
         
+        // Skip if no world data or nothing to show
+        if (!world || !world.width || !world.height) return;
         if (!showBiomes && !noiseType) return;
         
         const bounds = camera.getVisibleTileBounds(this.TILE_SIZE);

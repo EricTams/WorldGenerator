@@ -11,6 +11,13 @@ const BiomeData = {
     // Order of biome evaluation (array of biome IDs)
     biomeOrder: [],
     
+    // AIDEV-NOTE: Track whether rules are loaded
+    // When false, the world should be empty and rule loader shown
+    rulesLoaded: false,
+    
+    // Current rule set name for display
+    currentRuleSet: null,
+    
     // =====================
     // DEFAULT CONFIGURATION
     // =====================
@@ -386,10 +393,664 @@ const BiomeData = {
     // INITIALIZATION
     // =====================
     
+    /**
+     * Initialize with empty state - no rules loaded
+     * Rules are loaded explicitly via loadDefaultDungeon(), loadLocal(), etc.
+     */
     init() {
+        this.biomes = {};
+        this.biomeOrder = [];
+        this.rulesLoaded = false;
+        this.currentRuleSet = null;
+        console.log('BiomeData initialized (no rules loaded)');
+    },
+    
+    /**
+     * Load the default dungeon rules
+     */
+    loadDefaultDungeon() {
         this.biomes = JSON.parse(JSON.stringify(this.defaults.biomes));
         this.biomeOrder = JSON.parse(JSON.stringify(this.defaults.biomeOrder));
-        console.log(`BiomeData initialized: ${Object.keys(this.biomes).length} biomes`);
+        this.rulesLoaded = true;
+        this.currentRuleSet = 'Default Dungeon';
+        console.log(`Loaded Default Dungeon: ${Object.keys(this.biomes).length} biomes`);
+    },
+    
+    /**
+     * Load the Generation Zoo (demo/example rules)
+     * AIDEV-NOTE: 8x8 grid - each cell is a mini Terraria-style world showcasing a feature
+     * Each cell's rules are organized into collapsible groups
+     */
+    loadGenerationZoo() {
+        const CELL = 16;
+        
+        // Helper: conditions to check if we're in a specific cell
+        const inCell = (col, row) => [
+            { type: 'compare', value: 'x_tile', modifiers: [{ op: '/', arg: CELL }, { op: 'floor' }], op: '==', threshold: col },
+            { type: 'compare', value: 'y_tile', modifiers: [{ op: '/', arg: CELL }, { op: 'floor' }], op: '==', threshold: row }
+        ];
+        
+        // Helper: check if tile is solid (cave_noise < 0.55)
+        const isSolid = { type: 'compare', value: 'cave_noise', op: '<', threshold: 0.55 };
+        const isAir = { type: 'compare', value: 'cave_noise', op: '>=', threshold: 0.55 };
+        
+        // Helper: surface detection
+        const aboveIsAir = { type: 'compare', value: 'above_is_air', op: '==', threshold: 1 };
+        
+        this.biomes = {
+            zoo_grid: {
+                id: 'zoo_grid',
+                name: 'Generation Zoo',
+                icon: '🦁',
+                color: '#f5a623',
+                spawnConditions: { type: 'AND', conditions: [] },
+                tileRules: [
+                    // ===================
+                    // BORDERS GROUP
+                    // ===================
+                    {
+                        type: 'group', id: 'grp_borders', name: '📐 Cell Borders', collapsed: true,
+                        rules: [
+                            { id: 'border_v', name: 'Vertical', tile: 'Unbreakable_Frame', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: CELL }], op: '==', threshold: 0 }
+                                ] } },
+                            { id: 'border_h', name: 'Horizontal', tile: 'Unbreakable_Frame', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: CELL }], op: '==', threshold: 0 }
+                                ] } }
+                        ]
+                    },
+                    
+                    // ===================
+                    // ROW 0
+                    // ===================
+                    {
+                        type: 'group', id: 'grp_0_0', name: '🪜 (0,0) Ladders', collapsed: true,
+                        rules: [
+                            { id: 'c00_ladder', name: 'Ladder', tile: 'Ladder', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    ...inCell(0, 0), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 3 }
+                                ] } },
+                            { id: 'c00_grass', name: 'Grass', tile: 'Dirt_Grass', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 0), isSolid, aboveIsAir] } },
+                            { id: 'c00_dirt', name: 'Dirt', tile: 'Dirt', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 0), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_1_0', name: '━ (1,0) Platforms', collapsed: true,
+                        rules: [
+                            { id: 'c10_plat', name: 'Platform', tile: 'Platform', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    ...inCell(1, 0), isAir,
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c10_grass', name: 'Grass', tile: 'Dirt_Grass', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 0), isSolid, aboveIsAir] } },
+                            { id: 'c10_dirt', name: 'Dirt', tile: 'Dirt', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 0), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_2_0', name: '🏛️ (2,0) Pillars', collapsed: true,
+                        rules: [
+                            { id: 'c20_pillar', name: 'Pillar', tile: 'Pillar', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    ...inCell(2, 0), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 },
+                                    { type: 'compare', value: 'cave_noise', modifiers: [{ op: 'yScale', arg: 3 }], op: '>=', threshold: 0.5 }
+                                ] } },
+                            { id: 'c20_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 0), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_3_0', name: '💧 (3,0) Stalactites', collapsed: true,
+                        rules: [
+                            { id: 'c30_slime', name: 'Drip', tile: 'Slime', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    ...inCell(3, 0), isAir,
+                                    { type: 'compare', value: 'above_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 3 }], op: '==', threshold: 1 }
+                                ] } },
+                            { id: 'c30_dirt', name: 'Dirt', tile: 'Dirt', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 0), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_4_0', name: '⚠️ (4,0) Thorns', collapsed: true,
+                        rules: [
+                            { id: 'c40_ceil', name: 'Ceiling', tile: 'Thorns', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    ...inCell(4, 0), isAir,
+                                    { type: 'compare', value: 'above_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c40_floor', name: 'Floor', tile: 'Thorns', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [
+                                    ...inCell(4, 0), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 0 }
+                                ] } },
+                            { id: 'c40_meteor', name: 'Meteor', tile: 'Meteor_Rock', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 0), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_5_0', name: '📶 (5,0) Stairs', collapsed: true,
+                        rules: [
+                            { id: 'c50_stl', name: 'Top-Left', tile: 'Stair_Top_Left', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 0), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 1 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 1 }
+                                ] } },
+                            { id: 'c50_str', name: 'Top-Right', tile: 'Stair_Top_Right', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 0), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 1 }
+                                ] } },
+                            { id: 'c50_sbl', name: 'Bottom-Left', tile: 'Stair_Bottom_Left', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 0), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 1 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c50_sbr', name: 'Bottom-Right', tile: 'Stair_Bottom_Right', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 0), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c50_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 0), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_6_0', name: '🗿 (6,0) Carvings', collapsed: true,
+                        rules: [
+                            { id: 'c60_carv', name: 'Carving', tile: 'Stone_Carving_1', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 0), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 7 }], op: '==', threshold: 3 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 }
+                                ] } },
+                            { id: 'c60_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 0), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_7_0', name: '😊 (7,0) Smile Blocks', collapsed: true,
+                        rules: [
+                            { id: 'c70_smile', name: 'Smile', tile: 'Smile_Block', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 0), isAir,
+                                    { type: 'compare', value: 'random', op: '>=', threshold: 0.92 }
+                                ] } },
+                            { id: 'c70_dirt', name: 'Dirt Bricks', tile: 'Dirt_Bricks', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 0), isSolid] } }
+                        ]
+                    },
+                    
+                    // ===================
+                    // ROW 1
+                    // ===================
+                    {
+                        type: 'group', id: 'grp_0_1', name: '🪟 (0,1) Glass', collapsed: true,
+                        rules: [
+                            { id: 'c01_glass', name: 'Glass', tile: 'Glass', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 1), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c01_mech', name: 'Mechanical', tile: 'Mechanical_Tile', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 1), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_1_1', name: '⚡ (1,1) Power', collapsed: true,
+                        rules: [
+                            { id: 'c11_power', name: 'Power Block', tile: 'Big_Power_Block', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 1), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 8 }], op: 'between', min: 3, max: 4 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 8 }], op: 'between', min: 3, max: 4 }
+                                ] } },
+                            { id: 'c11_elec', name: 'Electric', tile: 'Electric_Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 1), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_2_1', name: '🔘 (2,1) Buttons', collapsed: true,
+                        rules: [
+                            { id: 'c21_on', name: 'On', tile: 'Button_On', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 1), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c21_off', name: 'Off', tile: 'Button_Off', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 1), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 5 }
+                                ] } },
+                            { id: 'c21_mech', name: 'Mechanical', tile: 'Mechanical_Tile', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 1), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_3_1', name: '🔀 (3,1) Wall Switches', collapsed: true,
+                        rules: [
+                            { id: 'c31_on', name: 'On', tile: 'Brick_Switch_On', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 1), isAir,
+                                    { type: 'compare', value: 'left_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c31_off', name: 'Off', tile: 'Brick_Switch_Off', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 1), isAir,
+                                    { type: 'compare', value: 'right_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c31_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 1), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_4_1', name: '🍈 (4,1) Melons', collapsed: true,
+                        rules: [
+                            { id: 'c41_melon', name: 'Melon', tile: 'Melon', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 1), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'random', op: '>=', threshold: 0.7 }
+                                ] } },
+                            { id: 'c41_grass', name: 'Grass', tile: 'Dirt_Grass', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 1), isSolid, aboveIsAir] } },
+                            { id: 'c41_dirt', name: 'Dirt', tile: 'Dirt', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 1), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_5_1', name: '🎹 (5,1) Pianos', collapsed: true,
+                        rules: [
+                            { id: 'c51_piano', name: 'Piano', tile: 'Piano', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 1), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c51_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 1), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_6_1', name: '☁️ (6,1) Clouds', collapsed: true,
+                        rules: [
+                            { id: 'c61_cloud', name: 'Cloud', tile: 'Cloud', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 1), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_7_1', name: '🏜️ (7,1) Sand', collapsed: true,
+                        rules: [
+                            { id: 'c71_sand', name: 'Sand', tile: 'Sand', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 1), isSolid] } }
+                        ]
+                    },
+                    
+                    // ===================
+                    // ROW 2
+                    // ===================
+                    {
+                        type: 'group', id: 'grp_0_2', name: '🎚️ (0,2) Pillar Switches', collapsed: true,
+                        rules: [
+                            { id: 'c02_on', name: 'On', tile: 'Pillar_Switch_On', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 2), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c02_off', name: 'Off', tile: 'Pillar_Switch_Off', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 2), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 5 }
+                                ] } },
+                            { id: 'c02_mech', name: 'Mechanical', tile: 'Mechanical_Tile', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 2), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_1_2', name: '🧩 (1,2) Puzzle', collapsed: true,
+                        rules: [
+                            { id: 'c12_puzzle', name: 'Puzzle Wall', tile: 'Brick_Wall_Puzzle', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 2), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_2_2', name: '🧱 (2,2) Mixed Terrain', collapsed: true,
+                        rules: [
+                            { id: 'c22_grass', name: 'Grass', tile: 'Dirt_Grass', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 2), isSolid, aboveIsAir] } },
+                            { id: 'c22_bricks', name: 'Dirt Bricks', tile: 'Dirt_Bricks', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 2), isSolid,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.6 }
+                                ] } },
+                            { id: 'c22_dirt', name: 'Dirt', tile: 'Dirt', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 2), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_3_2', name: '☄️ (3,2) Meteor', collapsed: true,
+                        rules: [
+                            { id: 'c32_meteor', name: 'Meteor Rock', tile: 'Meteor_Rock', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 2), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_4_2', name: '🟢 (4,2) Slime', collapsed: true,
+                        rules: [
+                            { id: 'c42_slime', name: 'Slime', tile: 'Slime', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 2), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_5_2', name: '🏺 (5,2) Carving Variety', collapsed: true,
+                        rules: [
+                            { id: 'c52_c1', name: 'Carving 1', tile: 'Stone_Carving_1', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 2), isAir,
+                                    { type: 'compare', value: 'random', op: '>=', threshold: 0.9 },
+                                    { type: 'compare', value: 'detail_noise', op: '<', threshold: 0.4 }
+                                ] } },
+                            { id: 'c52_c2', name: 'Carving 2', tile: 'Stone_Carving_2', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 2), isAir,
+                                    { type: 'compare', value: 'random', op: '>=', threshold: 0.9 },
+                                    { type: 'compare', value: 'detail_noise', op: 'between', min: 0.4, max: 0.7 }
+                                ] } },
+                            { id: 'c52_c3', name: 'Carving 3', tile: 'Stone_Carving_3', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 2), isAir,
+                                    { type: 'compare', value: 'random', op: '>=', threshold: 0.9 },
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.7 }
+                                ] } },
+                            { id: 'c52_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 2), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_6_2', name: '🖼️ (6,2) BG Decor', collapsed: true,
+                        rules: [
+                            { id: 'c62_bg', name: 'BG Brick', tile: 'BG_Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 2), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.5 }
+                                ] } },
+                            { id: 'c62_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 2), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_7_2', name: '🌫️ (7,2) Far BG', collapsed: true,
+                        rules: [
+                            { id: 'c72_farbg', name: 'Far BG Brick', tile: 'Far_BG_Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 2), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.4 }
+                                ] } },
+                            { id: 'c72_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 2), isSolid] } }
+                        ]
+                    },
+                    
+                    // ===================
+                    // ROW 3 - BG Decorations
+                    // ===================
+                    {
+                        type: 'group', id: 'grp_0_3', name: '🧱 (0,3) BG Brick Fence', collapsed: true,
+                        rules: [
+                            { id: 'c03_fence', name: 'BG Fence', tile: 'BG_Brick_Fence', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 3), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.5 }
+                                ] } },
+                            { id: 'c03_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 3), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_1_3', name: '🏛️ (1,3) BG Brick Pillar', collapsed: true,
+                        rules: [
+                            { id: 'c13_bgpillar', name: 'BG Pillar', tile: 'BG_Brick_Pillar', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 3), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 4 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c13_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 3), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_2_3', name: '☄️ (2,3) BG Meteor', collapsed: true,
+                        rules: [
+                            { id: 'c23_bgmet', name: 'BG Meteor', tile: 'BG_Meteor', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 3), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.45 }
+                                ] } },
+                            { id: 'c23_meteor', name: 'Meteor', tile: 'Meteor_Rock', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 3), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_3_3', name: '🏜️ (3,3) BG Sand', collapsed: true,
+                        rules: [
+                            { id: 'c33_bgsand', name: 'BG Sand', tile: 'BG_Sand', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 3), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.4 }
+                                ] } },
+                            { id: 'c33_sand', name: 'Sand', tile: 'Sand', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 3), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_4_3', name: '🌿 (4,3) BG Thorns', collapsed: true,
+                        rules: [
+                            { id: 'c43_bgthorn', name: 'BG Thorns', tile: 'BG_Thorns', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 3), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.5 }
+                                ] } },
+                            { id: 'c43_dirt', name: 'Dirt', tile: 'Dirt', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 3), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_5_3', name: '🖼️ (5,3) Far BG Fence', collapsed: true,
+                        rules: [
+                            { id: 'c53_farfence', name: 'Far BG Fence', tile: 'Far_BG_Brick_Fence', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 3), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.45 }
+                                ] } },
+                            { id: 'c53_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 3), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_6_3', name: '🏛️ (6,3) Far BG Pillar', collapsed: true,
+                        rules: [
+                            { id: 'c63_farpillar', name: 'Far BG Pillar', tile: 'Far_BG_Brick_Pillar', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 3), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c63_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 3), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_7_3', name: '🌫️ (7,3) Far BG Meteor', collapsed: true,
+                        rules: [
+                            { id: 'c73_farmet', name: 'Far BG Meteor', tile: 'Far_BG_Meteor', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 3), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.4 }
+                                ] } },
+                            { id: 'c73_meteor', name: 'Meteor', tile: 'Meteor_Rock', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 3), isSolid] } }
+                        ]
+                    },
+                    
+                    // ===================
+                    // ROW 4 - More BG & Combos
+                    // ===================
+                    {
+                        type: 'group', id: 'grp_0_4', name: '🏜️ (0,4) Far BG Sand', collapsed: true,
+                        rules: [
+                            { id: 'c04_farsand', name: 'Far BG Sand', tile: 'Far_BG_Sand', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 4), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.35 }
+                                ] } },
+                            { id: 'c04_sand', name: 'Sand', tile: 'Sand', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(0, 4), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_1_4', name: '🌿 (1,4) Far BG Thorns', collapsed: true,
+                        rules: [
+                            { id: 'c14_farthorn', name: 'Far BG Thorns', tile: 'Far_BG_Thorns', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 4), isAir,
+                                    { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.4 }
+                                ] } },
+                            { id: 'c14_dirt', name: 'Dirt', tile: 'Dirt', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(1, 4), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_2_4', name: '🔌 (2,4) Power + Switch', collapsed: true,
+                        rules: [
+                            { id: 'c24_power', name: 'Power', tile: 'Big_Power_Block', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 }
+                                ] } },
+                            { id: 'c24_sw', name: 'Switch', tile: 'Pillar_Switch_Button_On', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 4), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 1 }
+                                ] } },
+                            { id: 'c24_elec', name: 'Electric', tile: 'Electric_Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(2, 4), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_3_4', name: '🎛️ (3,4) Switch Buttons', collapsed: true,
+                        rules: [
+                            { id: 'c34_on', name: 'Button On', tile: 'Pillar_Switch_Button_On', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 4), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 1 }
+                                ] } },
+                            { id: 'c34_off', name: 'Button Off', tile: 'Pillar_Switch_Button_Off', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 4), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 4 }
+                                ] } },
+                            { id: 'c34_mech', name: 'Mechanical', tile: 'Mechanical_Tile', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(3, 4), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_4_4', name: '🪜 (4,4) Ladder + Platform', collapsed: true,
+                        rules: [
+                            { id: 'c44_ladder', name: 'Ladder', tile: 'Ladder', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 }
+                                ] } },
+                            { id: 'c44_plat', name: 'Platform', tile: 'Platform', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 4), isAir,
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 3 }
+                                ] } },
+                            { id: 'c44_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(4, 4), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_5_4', name: '📶 (5,4) Full Staircase', collapsed: true,
+                        rules: [
+                            { id: 'c54_stl', name: 'Stair TL', tile: 'Stair_Top_Left', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 2 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c54_str', name: 'Stair TR', tile: 'Stair_Top_Right', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c54_sbl', name: 'Stair BL', tile: 'Stair_Bottom_Left', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 2 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 }
+                                ] } },
+                            { id: 'c54_sbr', name: 'Stair BR', tile: 'Stair_Bottom_Right', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 }
+                                ] } },
+                            { id: 'c54_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(5, 4), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_6_4', name: '🗿 (6,4) All Carvings', collapsed: true,
+                        rules: [
+                            { id: 'c64_c1', name: 'Carving 1', tile: 'Stone_Carving_1', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 1 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c64_c2', name: 'Carving 2', tile: 'Stone_Carving_2', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 3 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c64_c3', name: 'Carving 3', tile: 'Stone_Carving_3', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 4), isAir,
+                                    { type: 'compare', value: 'x_tile', modifiers: [{ op: '%', arg: 6 }], op: '==', threshold: 5 },
+                                    { type: 'compare', value: 'y_tile', modifiers: [{ op: '%', arg: 5 }], op: '==', threshold: 2 }
+                                ] } },
+                            { id: 'c64_brick', name: 'Brick', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(6, 4), isSolid] } }
+                        ]
+                    },
+                    {
+                        type: 'group', id: 'grp_7_4', name: '🎲 (7,4) Random Mix', collapsed: true,
+                        rules: [
+                            { id: 'c74_smile', name: 'Smile', tile: 'Smile_Block', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 4), isAir,
+                                    { type: 'compare', value: 'random', op: '>=', threshold: 0.9 }
+                                ] } },
+                            { id: 'c74_melon', name: 'Melon', tile: 'Melon', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 4), isAir,
+                                    { type: 'compare', value: 'below_is_air', op: '==', threshold: 0 },
+                                    { type: 'compare', value: 'random', op: '>=', threshold: 0.6 }
+                                ] } },
+                            { id: 'c74_mix', name: 'Mixed', tile: 'Brick', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 4), isSolid,
+                                    { type: 'compare', value: 'detail_noise', op: '<', threshold: 0.5 }
+                                ] } },
+                            { id: 'c74_mix2', name: 'Mixed 2', tile: 'Dirt_Bricks', layer: 'fg',
+                                conditions: { type: 'AND', conditions: [...inCell(7, 4), isSolid] } }
+                        ]
+                    },
+                    
+                    // ===================
+                    // BACKGROUND
+                    // ===================
+                    {
+                        type: 'group', id: 'grp_bg', name: '⬛ Background', collapsed: true,
+                        rules: [
+                            { id: 'zoo_bg', name: 'Black', tile: 'Black', layer: 'bg',
+                                conditions: { type: 'AND', conditions: [] } }
+                        ]
+                    }
+                ]
+            }
+        };
+        this.biomeOrder = ['zoo_grid'];
+        this.rulesLoaded = true;
+        this.currentRuleSet = 'Generation Zoo';
+        console.log('Loaded Generation Zoo: Terraria-style exhibits (grouped)');
+    },
+    
+    /**
+     * Clear all rules (empty state)
+     */
+    clearRules() {
+        this.biomes = {};
+        this.biomeOrder = [];
+        this.rulesLoaded = false;
+        this.currentRuleSet = null;
+        console.log('BiomeData cleared');
     },
     
     // =====================
@@ -434,63 +1095,311 @@ const BiomeData = {
     // =====================
     // BIOME TILE RULES API
     // =====================
+    // AIDEV-NOTE: tileRules can contain:
+    //   - Regular rules: { id, name, tile, layer, conditions }
+    //   - Groups: { type: 'group', id, name, collapsed, rules: [...] }
+    // Groups are flattened for evaluation but displayed collapsed in UI
     
+    /**
+     * Get flattened tile rules for evaluation (expands groups)
+     */
     getBiomeTileRules(biomeId) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return [];
+        return this.flattenRules(biome.tileRules || []);
+    },
+    
+    /**
+     * Get raw tile rules including groups (for UI display)
+     */
+    getBiomeTileRulesRaw(biomeId) {
         return this.biomes[biomeId]?.tileRules || [];
     },
     
+    /**
+     * Flatten rules array (expand groups into individual rules)
+     */
+    flattenRules(rules) {
+        const result = [];
+        for (const item of rules) {
+            if (item.type === 'group') {
+                result.push(...(item.rules || []));
+            } else {
+                result.push(item);
+            }
+        }
+        return result;
+    },
+    
+    /**
+     * Find a rule by ID (searches inside groups too)
+     */
     getBiomeTileRule(biomeId, ruleId) {
         const biome = this.biomes[biomeId];
         if (!biome) return null;
-        return biome.tileRules.find(r => r.id === ruleId) || null;
-    },
-    
-    addBiomeTileRule(biomeId, rule) {
-        if (this.biomes[biomeId]) {
-            this.biomes[biomeId].tileRules.push(rule);
+        
+        for (const item of biome.tileRules) {
+            if (item.type === 'group') {
+                const found = item.rules?.find(r => r.id === ruleId);
+                if (found) return found;
+            } else if (item.id === ruleId) {
+                return item;
+            }
         }
+        return null;
     },
     
+    /**
+     * Find which group a rule belongs to (returns null if ungrouped)
+     */
+    findRuleGroup(biomeId, ruleId) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return null;
+        
+        for (const item of biome.tileRules) {
+            if (item.type === 'group') {
+                if (item.rules?.some(r => r.id === ruleId)) {
+                    return item;
+                }
+            }
+        }
+        return null;
+    },
+    
+    /**
+     * Add a rule (optionally to a group)
+     */
+    addBiomeTileRule(biomeId, rule, groupId = null) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return;
+        
+        if (groupId) {
+            const group = biome.tileRules.find(g => g.type === 'group' && g.id === groupId);
+            if (group) {
+                group.rules = group.rules || [];
+                group.rules.push(rule);
+                return;
+            }
+        }
+        biome.tileRules.push(rule);
+    },
+    
+    /**
+     * Update a rule (searches inside groups)
+     */
     updateBiomeTileRule(biomeId, ruleId, updates) {
         const biome = this.biomes[biomeId];
         if (!biome) return;
-        const index = biome.tileRules.findIndex(r => r.id === ruleId);
-        if (index >= 0) {
-            biome.tileRules[index] = { ...biome.tileRules[index], ...updates };
+        
+        for (let i = 0; i < biome.tileRules.length; i++) {
+            const item = biome.tileRules[i];
+            if (item.type === 'group') {
+                const idx = item.rules?.findIndex(r => r.id === ruleId) ?? -1;
+                if (idx >= 0) {
+                    item.rules[idx] = { ...item.rules[idx], ...updates };
+                    return;
+                }
+            } else if (item.id === ruleId) {
+                biome.tileRules[i] = { ...item, ...updates };
+                return;
+            }
         }
     },
     
+    /**
+     * Remove a rule (searches inside groups)
+     */
     removeBiomeTileRule(biomeId, ruleId) {
         const biome = this.biomes[biomeId];
         if (!biome) return;
-        const index = biome.tileRules.findIndex(r => r.id === ruleId);
-        if (index >= 0) {
-            biome.tileRules.splice(index, 1);
+        
+        for (let i = 0; i < biome.tileRules.length; i++) {
+            const item = biome.tileRules[i];
+            if (item.type === 'group') {
+                const idx = item.rules?.findIndex(r => r.id === ruleId) ?? -1;
+                if (idx >= 0) {
+                    item.rules.splice(idx, 1);
+                    return;
+                }
+            } else if (item.id === ruleId) {
+                biome.tileRules.splice(i, 1);
+                return;
+            }
         }
     },
     
     /**
      * Move a tile rule up or down in the order
-     * @param {string} biomeId 
-     * @param {string} ruleId 
-     * @param {number} direction - -1 for up, +1 for down
-     * @returns {boolean} true if moved successfully
      */
     moveBiomeTileRule(biomeId, ruleId, direction) {
         const biome = this.biomes[biomeId];
         if (!biome) return false;
         
+        // Check if rule is in a group
+        for (const item of biome.tileRules) {
+            if (item.type === 'group' && item.rules) {
+                const idx = item.rules.findIndex(r => r.id === ruleId);
+                if (idx >= 0) {
+                    const newIdx = idx + direction;
+                    if (newIdx < 0 || newIdx >= item.rules.length) return false;
+                    const temp = item.rules[idx];
+                    item.rules[idx] = item.rules[newIdx];
+                    item.rules[newIdx] = temp;
+                    return true;
+                }
+            }
+        }
+        
+        // Check top-level rules
         const index = biome.tileRules.findIndex(r => r.id === ruleId);
         if (index < 0) return false;
         
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= biome.tileRules.length) return false;
         
-        // Swap the rules
         const temp = biome.tileRules[index];
         biome.tileRules[index] = biome.tileRules[newIndex];
         biome.tileRules[newIndex] = temp;
+        return true;
+    },
+    
+    // =====================
+    // GROUP API
+    // =====================
+    
+    /**
+     * Add a new group
+     */
+    addGroup(biomeId, group) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return;
         
+        biome.tileRules.push({
+            type: 'group',
+            id: group.id || 'group_' + Date.now(),
+            name: group.name || 'New Group',
+            collapsed: group.collapsed ?? true,
+            rules: group.rules || []
+        });
+    },
+    
+    /**
+     * Get a group by ID
+     */
+    getGroup(biomeId, groupId) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return null;
+        return biome.tileRules.find(g => g.type === 'group' && g.id === groupId) || null;
+    },
+    
+    /**
+     * Update a group's properties (name, collapsed)
+     */
+    updateGroup(biomeId, groupId, updates) {
+        const group = this.getGroup(biomeId, groupId);
+        if (group) {
+            if (updates.name !== undefined) group.name = updates.name;
+            if (updates.collapsed !== undefined) group.collapsed = updates.collapsed;
+        }
+    },
+    
+    /**
+     * Delete a group
+     * @param {boolean} deleteRules - If true, delete all rules in group. If false, move them out.
+     */
+    removeGroup(biomeId, groupId, deleteRules = false) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return;
+        
+        const idx = biome.tileRules.findIndex(g => g.type === 'group' && g.id === groupId);
+        if (idx < 0) return;
+        
+        const group = biome.tileRules[idx];
+        
+        if (!deleteRules && group.rules?.length > 0) {
+            // Move rules out of group (insert after group position)
+            biome.tileRules.splice(idx, 1, ...group.rules);
+        } else {
+            // Just delete the group (and its rules)
+            biome.tileRules.splice(idx, 1);
+        }
+    },
+    
+    /**
+     * Move a rule into a group
+     */
+    moveRuleToGroup(biomeId, ruleId, groupId) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return false;
+        
+        // Find and remove the rule from its current location
+        let rule = null;
+        
+        for (let i = 0; i < biome.tileRules.length; i++) {
+            const item = biome.tileRules[i];
+            if (item.type === 'group') {
+                const idx = item.rules?.findIndex(r => r.id === ruleId) ?? -1;
+                if (idx >= 0) {
+                    rule = item.rules.splice(idx, 1)[0];
+                    break;
+                }
+            } else if (item.id === ruleId) {
+                rule = biome.tileRules.splice(i, 1)[0];
+                break;
+            }
+        }
+        
+        if (!rule) return false;
+        
+        // Add to target group
+        const group = this.getGroup(biomeId, groupId);
+        if (group) {
+            group.rules = group.rules || [];
+            group.rules.push(rule);
+            return true;
+        }
+        
+        // If group not found, put rule back at top level
+        biome.tileRules.push(rule);
+        return false;
+    },
+    
+    /**
+     * Move a rule out of its group to top level
+     */
+    moveRuleOutOfGroup(biomeId, ruleId) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return false;
+        
+        for (const item of biome.tileRules) {
+            if (item.type === 'group' && item.rules) {
+                const idx = item.rules.findIndex(r => r.id === ruleId);
+                if (idx >= 0) {
+                    const rule = item.rules.splice(idx, 1)[0];
+                    biome.tileRules.push(rule);
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+    
+    /**
+     * Move a group up or down
+     */
+    moveGroup(biomeId, groupId, direction) {
+        const biome = this.biomes[biomeId];
+        if (!biome) return false;
+        
+        const idx = biome.tileRules.findIndex(g => g.type === 'group' && g.id === groupId);
+        if (idx < 0) return false;
+        
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= biome.tileRules.length) return false;
+        
+        const temp = biome.tileRules[idx];
+        biome.tileRules[idx] = biome.tileRules[newIdx];
+        biome.tileRules[newIdx] = temp;
         return true;
     },
     
@@ -499,7 +1408,7 @@ const BiomeData = {
     // =====================
     
     reset() {
-        this.init();
+        this.loadDefaultDungeon();
     },
     
     exportJSON() {
@@ -509,7 +1418,7 @@ const BiomeData = {
         }, null, 2);
     },
     
-    importJSON(json) {
+    importJSON(json, ruleSetName = 'Imported') {
         try {
             const data = JSON.parse(json);
             if (data.biomes) this.biomes = data.biomes;
@@ -519,6 +1428,8 @@ const BiomeData = {
                 // Fallback for old format
                 this.biomeOrder = Object.keys(this.biomes);
             }
+            this.rulesLoaded = true;
+            this.currentRuleSet = ruleSetName;
             console.log(`Imported: ${Object.keys(this.biomes).length} biomes`);
         } catch (e) {
             console.error('Failed to import:', e);
