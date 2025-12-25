@@ -11,6 +11,22 @@ const BiomeData = {
     // Order of biome evaluation (array of biome IDs)
     biomeOrder: [],
     
+    // AIDEV-NOTE: Corridor configuration for Hub and Spokes mode
+    // Shape parameters control how corridors are carved between rooms
+    corridorConfig: {
+        width: 3,           // Corridor width in tiles (1-7)
+        noiseAmplitude: 4,  // How much corridors wander (0 = straight, 10 = very wavy)
+        widthVariation: 2,  // How much width varies along corridor (0 = constant width)
+        // AIDEV-NOTE: Cave carving creates organic caves around room air
+        caveDistance: 12,   // Max distance from room air to carve (0 = disabled)
+        caveRoughness: 4    // How much noise affects carving boundary (0 = smooth, 10 = rough)
+    },
+    
+    // AIDEV-NOTE: Corridor tile rules - evaluated for each tile in corridors
+    // Context includes: corridor_t (0-1 position along path), x_tile, y_tile, random, detail_noise
+    // Rules for 'wall' layer select wall tiles, 'bg' layer selects background
+    corridorTileRules: [],
+    
     // AIDEV-NOTE: Track whether rules are loaded
     // When false, the world should be empty and rule loader shown
     rulesLoaded: false,
@@ -34,10 +50,13 @@ const BiomeData = {
         // AIDEV-NOTE: Cave noise determines navigability:
         //   < 0.55: Solid wall (foreground tiles) - most of the world
         //   >= 0.55: Open cave (tunnels to explore)
-        // AIDEV-NOTE: Background layer should ALWAYS use the Black tile.
+        // AIDEV-NOTE: *** DO NOT CHANGE THIS NOTE OR THE BLACK TILE USAGE ***
+        // Background layer should ALWAYS use the Black tile.
+        //   The Black tile is a solid black 16x16 tile specifically created for
+        //   cave/dungeon backgrounds. It provides proper contrast for lighting.
         //   Tiles named "BG_*" (BG_Brick, BG_Sand, etc.) are decorative objects
-        //   meant to be drawn in the background layer as scenery, NOT as the
-        //   actual background fill. Black provides proper contrast for lighting.
+        //   meant to be drawn in the foreground layer as background scenery, NOT
+        //   as the actual background fill. ALWAYS USE 'Black' FOR bg LAYER.
         biomes: {
             ancient: {
                 id: 'ancient',
@@ -386,7 +405,105 @@ const BiomeData = {
                     }
                 ]
             }
-        }
+        },
+        
+        // AIDEV-NOTE: Default corridor configuration for Hub and Spokes mode
+        corridorConfig: {
+            width: 3,
+            noiseAmplitude: 4,
+            widthVariation: 2,
+            caveDistance: 12,
+            caveRoughness: 4
+        },
+        
+        // AIDEV-NOTE: Default corridor tile rules (~4 tiles each for walls and backgrounds)
+        // AIDEV-NOTE: Corridor rules use detail_noise for organic variation
+        // Context values: corridor_t (0-1), x_tile, y_tile, random, detail_noise
+        corridorTileRules: [
+            // Wall tiles (corridor border) - evaluated first match wins
+            // Using noise thresholds to create bands of different tiles
+            {
+                id: 'corridor_wall_carving',
+                name: 'Stone Carving',
+                tile: 'Stone_Carving_1',
+                layer: 'wall',
+                conditions: {
+                    type: 'AND',
+                    conditions: [
+                        { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.75 }
+                    ]
+                }
+            },
+            {
+                id: 'corridor_wall_dirt',
+                name: 'Dirt Walls',
+                tile: 'Dirt',
+                layer: 'wall',
+                conditions: {
+                    type: 'AND',
+                    conditions: [
+                        { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.5 }
+                    ]
+                }
+            },
+            {
+                id: 'corridor_wall_brick',
+                name: 'Brick Walls',
+                tile: 'Brick',
+                layer: 'wall',
+                conditions: {
+                    type: 'AND',
+                    conditions: [
+                        { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.25 }
+                    ]
+                }
+            },
+            {
+                id: 'corridor_wall_stone',
+                name: 'Stone',
+                tile: 'Stone',
+                layer: 'wall',
+                conditions: {
+                    type: 'AND',
+                    conditions: []  // Default fallback (detail_noise < 0.25)
+                }
+            },
+            // Background tiles (inside corridor passable space)
+            {
+                id: 'corridor_bg_brick',
+                name: 'BG Brick',
+                tile: 'BG_Brick',
+                layer: 'bg',
+                conditions: {
+                    type: 'AND',
+                    conditions: [
+                        { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.6 }
+                    ]
+                }
+            },
+            {
+                id: 'corridor_bg_far_brick',
+                name: 'Far BG Brick',
+                tile: 'Far_BG_Brick',
+                layer: 'bg',
+                conditions: {
+                    type: 'AND',
+                    conditions: [
+                        { type: 'compare', value: 'detail_noise', op: '>=', threshold: 0.3 }
+                    ]
+                }
+            },
+            {
+                id: 'corridor_bg_black',
+                name: 'Black Background',
+                tile: 'Black',
+                layer: 'bg',
+                conditions: {
+                    type: 'AND',
+                    conditions: []  // Default fallback
+                }
+            }
+        ]
     },
     
     // =====================
@@ -400,6 +517,8 @@ const BiomeData = {
     init() {
         this.biomes = {};
         this.biomeOrder = [];
+        this.corridorConfig = { width: 3, noiseAmplitude: 4, widthVariation: 2, caveDistance: 12, caveRoughness: 4 };
+        this.corridorTileRules = [];
         this.rulesLoaded = false;
         this.currentRuleSet = null;
         console.log('BiomeData initialized (no rules loaded)');
@@ -411,9 +530,11 @@ const BiomeData = {
     loadDefaultDungeon() {
         this.biomes = JSON.parse(JSON.stringify(this.defaults.biomes));
         this.biomeOrder = JSON.parse(JSON.stringify(this.defaults.biomeOrder));
+        this.corridorConfig = JSON.parse(JSON.stringify(this.defaults.corridorConfig));
+        this.corridorTileRules = JSON.parse(JSON.stringify(this.defaults.corridorTileRules));
         this.rulesLoaded = true;
         this.currentRuleSet = 'Default Dungeon';
-        console.log(`Loaded Default Dungeon: ${Object.keys(this.biomes).length} biomes`);
+        console.log(`Loaded Default Dungeon: ${Object.keys(this.biomes).length} biomes, ${this.corridorTileRules.length} corridor rules`);
     },
     
     /**
@@ -1037,6 +1158,8 @@ const BiomeData = {
             }
         };
         this.biomeOrder = ['zoo_grid'];
+        this.corridorConfig = JSON.parse(JSON.stringify(this.defaults.corridorConfig));
+        this.corridorTileRules = JSON.parse(JSON.stringify(this.defaults.corridorTileRules));
         this.rulesLoaded = true;
         this.currentRuleSet = 'Generation Zoo';
         console.log('Loaded Generation Zoo: Terraria-style exhibits (grouped)');
@@ -1048,6 +1171,8 @@ const BiomeData = {
     clearRules() {
         this.biomes = {};
         this.biomeOrder = [];
+        this.corridorConfig = { width: 3, noiseAmplitude: 4, widthVariation: 2, caveDistance: 12, caveRoughness: 4 };
+        this.corridorTileRules = [];
         this.rulesLoaded = false;
         this.currentRuleSet = null;
         console.log('BiomeData cleared');
@@ -1404,6 +1529,112 @@ const BiomeData = {
     },
     
     // =====================
+    // CORRIDOR RULES API
+    // =====================
+    
+    /**
+     * Get corridor configuration
+     */
+    getCorridorConfig() {
+        return this.corridorConfig;
+    },
+    
+    /**
+     * Update corridor configuration
+     */
+    updateCorridorConfig(updates) {
+        this.corridorConfig = { ...this.corridorConfig, ...updates };
+    },
+    
+    /**
+     * Get all corridor tile rules
+     */
+    getCorridorTileRules() {
+        return this.corridorTileRules;
+    },
+    
+    /**
+     * Get corridor tile rules by layer ('wall' or 'bg')
+     */
+    getCorridorTileRulesByLayer(layer) {
+        return this.corridorTileRules.filter(r => r.layer === layer);
+    },
+    
+    /**
+     * Get a corridor tile rule by ID
+     */
+    getCorridorTileRule(ruleId) {
+        return this.corridorTileRules.find(r => r.id === ruleId) || null;
+    },
+    
+    /**
+     * Add a corridor tile rule
+     */
+    addCorridorTileRule(rule) {
+        this.corridorTileRules.push(rule);
+    },
+    
+    /**
+     * Update a corridor tile rule
+     */
+    updateCorridorTileRule(ruleId, updates) {
+        const idx = this.corridorTileRules.findIndex(r => r.id === ruleId);
+        if (idx >= 0) {
+            this.corridorTileRules[idx] = { ...this.corridorTileRules[idx], ...updates };
+        }
+    },
+    
+    /**
+     * Remove a corridor tile rule
+     */
+    removeCorridorTileRule(ruleId) {
+        const idx = this.corridorTileRules.findIndex(r => r.id === ruleId);
+        if (idx >= 0) {
+            this.corridorTileRules.splice(idx, 1);
+        }
+    },
+    
+    /**
+     * Move a corridor tile rule up or down
+     */
+    moveCorridorTileRule(ruleId, direction) {
+        const idx = this.corridorTileRules.findIndex(r => r.id === ruleId);
+        if (idx < 0) return false;
+        
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= this.corridorTileRules.length) return false;
+        
+        const temp = this.corridorTileRules[idx];
+        this.corridorTileRules[idx] = this.corridorTileRules[newIdx];
+        this.corridorTileRules[newIdx] = temp;
+        return true;
+    },
+    
+    /**
+     * Evaluate corridor tile rules to select a tile
+     * @param {string} layer - 'wall' or 'bg'
+     * @param {Object} context - Context values (corridor_t, x_tile, y_tile, etc.)
+     * @returns {number} Tile index or -1
+     */
+    selectCorridorTile(layer, context) {
+        const rules = this.getCorridorTileRulesByLayer(layer);
+        
+        for (const rule of rules) {
+            if (this.evaluateConditions(rule.conditions, context)) {
+                const tileKey = rule.tile.replace(/ /g, '_');
+                return TileAtlas.Tiles[tileKey] ?? -1;
+            }
+        }
+        
+        // Default fallbacks
+        if (layer === 'wall') {
+            return TileAtlas.Tiles.Brick ?? 0;
+        } else {
+            return TileAtlas.Tiles.Black ?? 17;
+        }
+    },
+    
+    // =====================
     // PERSISTENCE
     // =====================
     
@@ -1414,7 +1645,9 @@ const BiomeData = {
     exportJSON() {
         return JSON.stringify({
             biomeOrder: this.biomeOrder,
-            biomes: this.biomes
+            biomes: this.biomes,
+            corridorConfig: this.corridorConfig,
+            corridorTileRules: this.corridorTileRules
         }, null, 2);
     },
     
@@ -1428,9 +1661,20 @@ const BiomeData = {
                 // Fallback for old format
                 this.biomeOrder = Object.keys(this.biomes);
             }
+            // Load corridor data or use defaults
+            if (data.corridorConfig) {
+                this.corridorConfig = data.corridorConfig;
+            } else {
+                this.corridorConfig = JSON.parse(JSON.stringify(this.defaults.corridorConfig));
+            }
+            if (data.corridorTileRules) {
+                this.corridorTileRules = data.corridorTileRules;
+            } else {
+                this.corridorTileRules = JSON.parse(JSON.stringify(this.defaults.corridorTileRules));
+            }
             this.rulesLoaded = true;
             this.currentRuleSet = ruleSetName;
-            console.log(`Imported: ${Object.keys(this.biomes).length} biomes`);
+            console.log(`Imported: ${Object.keys(this.biomes).length} biomes, ${this.corridorTileRules.length} corridor rules`);
         } catch (e) {
             console.error('Failed to import:', e);
         }

@@ -36,7 +36,18 @@ const BiomeEditor = {
     // Currently editing
     editingBiome: null,     // For biome modal
     editingTileRule: null,  // For inline tile rule editor
-    editingType: null,      // 'biome' or 'tile'
+    editingCorridorRule: null, // For corridor tile rule editing
+    editingType: null,      // 'biome', 'tile', or 'corridor'
+    
+    // Corridor rules DOM references
+    corridorSectionEl: null,
+    corridorContentEl: null,
+    corridorRulesListEl: null,
+    corridorWidthSlider: null,
+    corridorNoiseSlider: null,
+    corridorVariationSlider: null,
+    caveDistanceSlider: null,
+    caveRoughnessSlider: null,
     
     // AIDEV-NOTE: Live preview system
     // Debounces regeneration while editing rules
@@ -104,11 +115,114 @@ const BiomeEditor = {
         // Load button (return to rule selection)
         document.getElementById('btn-load-rules')?.addEventListener('click', () => this.showRuleLoader());
         
+        // Corridor rules section
+        this.setupCorridorRules();
+        
+        // Generation mode toggle - show/hide relevant sections
+        this.setupGenerationModeToggle();
+        
         // Update UI based on whether rules are loaded
         this.updateLoaderVisibility();
         
         this.renderAll();
         console.log('BiomeEditor initialized');
+    },
+    
+    /**
+     * Set up generation mode toggle to show/hide relevant sections
+     * AIDEV-NOTE: Biomes + Tile Rules only apply to Noise Gen mode
+     * Corridor Rules only apply to Hub & Spokes mode
+     */
+    setupGenerationModeToggle() {
+        const modeSelect = document.getElementById('gen-mode-select');
+        if (modeSelect) {
+            modeSelect.addEventListener('change', () => {
+                this.updateSectionsForMode(modeSelect.value);
+            });
+            // Initialize on load
+            this.updateSectionsForMode(modeSelect.value);
+        }
+    },
+    
+    /**
+     * Show/hide editor sections based on generation mode
+     * @param {'noise'|'hub'} mode
+     */
+    updateSectionsForMode(mode) {
+        const isHubMode = mode === 'hub';
+        
+        // Biomes and Tile Rules: only for Noise Gen
+        if (this.biomesSectionEl) {
+            this.biomesSectionEl.style.display = isHubMode ? 'none' : '';
+        }
+        if (this.tileRulesSectionEl) {
+            this.tileRulesSectionEl.style.display = isHubMode ? 'none' : '';
+        }
+        
+        // Corridor Rules: only for Hub & Spokes
+        if (this.corridorSectionEl) {
+            this.corridorSectionEl.style.display = isHubMode ? '' : 'none';
+        }
+    },
+    
+    /**
+     * Set up corridor rules section (sliders and rule list)
+     */
+    setupCorridorRules() {
+        this.corridorSectionEl = document.querySelector('.corridor-rules-section');
+        this.corridorContentEl = document.getElementById('corridor-rules-content');
+        this.corridorRulesListEl = document.getElementById('corridor-tile-rules-list');
+        
+        // Collapse toggle
+        const header = document.getElementById('corridor-section-header');
+        header?.addEventListener('click', () => {
+            this.corridorSectionEl?.classList.toggle('collapsed');
+        });
+        
+        // Shape config sliders
+        this.corridorWidthSlider = document.getElementById('corridor-width');
+        this.corridorNoiseSlider = document.getElementById('corridor-noise');
+        this.corridorVariationSlider = document.getElementById('corridor-variation');
+        
+        // Slider event handlers
+        this.corridorWidthSlider?.addEventListener('input', (e) => {
+            document.getElementById('corridor-width-value').textContent = e.target.value;
+            BiomeData.updateCorridorConfig({ width: parseInt(e.target.value) });
+            this.triggerPreview();
+        });
+        
+        this.corridorNoiseSlider?.addEventListener('input', (e) => {
+            document.getElementById('corridor-noise-value').textContent = e.target.value;
+            BiomeData.updateCorridorConfig({ noiseAmplitude: parseInt(e.target.value) });
+            this.triggerPreview();
+        });
+        
+        this.corridorVariationSlider?.addEventListener('input', (e) => {
+            document.getElementById('corridor-variation-value').textContent = e.target.value;
+            BiomeData.updateCorridorConfig({ widthVariation: parseInt(e.target.value) });
+            this.triggerPreview();
+        });
+        
+        // Cave carving sliders
+        this.caveDistanceSlider = document.getElementById('cave-distance');
+        this.caveRoughnessSlider = document.getElementById('cave-roughness');
+        
+        this.caveDistanceSlider?.addEventListener('input', (e) => {
+            document.getElementById('cave-distance-value').textContent = e.target.value;
+            BiomeData.updateCorridorConfig({ caveDistance: parseInt(e.target.value) });
+            this.triggerPreview();
+        });
+        
+        this.caveRoughnessSlider?.addEventListener('input', (e) => {
+            document.getElementById('cave-roughness-value').textContent = e.target.value;
+            BiomeData.updateCorridorConfig({ caveRoughness: parseInt(e.target.value) });
+            this.triggerPreview();
+        });
+        
+        // Add corridor rule button
+        document.getElementById('btn-add-corridor-rule')?.addEventListener('click', () => {
+            this.addCorridorRule();
+        });
     },
     
     /**
@@ -291,14 +405,10 @@ const BiomeEditor = {
     
     /**
      * AIDEV-NOTE: Live preview - regenerate world when editing rules
-     * Debounced to avoid too many regenerations while typing
+     * Debounced to avoid too many regenerations while dragging sliders
+     * Works for: corridor config sliders, corridor rules, biome tile rules
      */
     triggerPreview() {
-        // Only preview when editing a tile rule (not biome spawn conditions)
-        if (this.editingType !== 'tile' || !this.editingTileRule || !this.selectedBiome) {
-            return;
-        }
-        
         // Clear existing timer
         if (this.previewTimer) {
             clearTimeout(this.previewTimer);
@@ -314,20 +424,21 @@ const BiomeEditor = {
      * Apply current values and regenerate
      */
     applyPreview() {
-        if (!this.editingTileRule || !this.selectedBiome) return;
-        
         // Regenerate world to show changes
         if (typeof Game !== 'undefined' && Game.regenerate) {
             Game.regenerate();
         }
         
-        // Update the tile rules list to show current state
-        this.renderTileRules();
+        // Update tile rules list if editing biome rules
+        if (this.editingTileRule && this.selectedBiome) {
+            this.renderTileRules();
+        }
     },
     
     renderAll() {
         this.renderBiomes();
         this.renderTileRules();
+        this.renderCorridorRules();
         this.updateVersionWarning();
     },
     
@@ -794,6 +905,243 @@ const BiomeEditor = {
     },
     
     // =====================
+    // CORRIDOR RULES
+    // =====================
+    
+    /**
+     * Render corridor rules section (sliders and tile rules list)
+     */
+    renderCorridorRules() {
+        if (!this.corridorRulesListEl) return;
+        
+        // Update slider values from config
+        const config = BiomeData.getCorridorConfig();
+        if (this.corridorWidthSlider) {
+            this.corridorWidthSlider.value = config.width;
+            document.getElementById('corridor-width-value').textContent = config.width;
+        }
+        if (this.corridorNoiseSlider) {
+            this.corridorNoiseSlider.value = config.noiseAmplitude;
+            document.getElementById('corridor-noise-value').textContent = config.noiseAmplitude;
+        }
+        if (this.corridorVariationSlider) {
+            this.corridorVariationSlider.value = config.widthVariation;
+            document.getElementById('corridor-variation-value').textContent = config.widthVariation;
+        }
+        // Cave carving sliders
+        if (this.caveDistanceSlider) {
+            this.caveDistanceSlider.value = config.caveDistance ?? 12;
+            document.getElementById('cave-distance-value').textContent = config.caveDistance ?? 12;
+        }
+        if (this.caveRoughnessSlider) {
+            this.caveRoughnessSlider.value = config.caveRoughness ?? 4;
+            document.getElementById('cave-roughness-value').textContent = config.caveRoughness ?? 4;
+        }
+        
+        // Render corridor tile rules
+        this.corridorRulesListEl.innerHTML = '';
+        
+        const rules = BiomeData.getCorridorTileRules();
+        if (rules.length === 0) {
+            this.corridorRulesListEl.innerHTML = '<p class="hint-text">No corridor rules defined</p>';
+            return;
+        }
+        
+        for (const rule of rules) {
+            const card = this.createCorridorRuleCard(rule);
+            this.corridorRulesListEl.appendChild(card);
+        }
+    },
+    
+    /**
+     * Create a corridor rule card element
+     */
+    createCorridorRuleCard(rule) {
+        const card = document.createElement('div');
+        card.className = 'rule-card';
+        card.dataset.ruleId = rule.id;
+        
+        // Tile preview
+        const preview = document.createElement('div');
+        preview.className = 'rule-tile-preview';
+        const tileKey = rule.tile?.replace(/ /g, '_');
+        const tileData = TileAtlas.TileData[TileAtlas.Tiles[tileKey]];
+        if (tileData) {
+            preview.style.backgroundImage = 'url(assets/tiles/atlas.png)';
+            preview.style.backgroundPosition = `${-tileData.col * 24}px ${-tileData.row * 24}px`;
+            preview.style.backgroundSize = `${TileAtlas.ATLAS_SIZE * 1.5}px`;
+            preview.style.width = '24px';
+            preview.style.height = '24px';
+            preview.style.imageRendering = 'pixelated';
+        }
+        card.appendChild(preview);
+        
+        // Rule name
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = rule.name;
+        name.style.flex = '1';
+        card.appendChild(name);
+        
+        // Layer badge
+        const layer = document.createElement('span');
+        layer.className = `layer-badge ${rule.layer}`;
+        layer.textContent = rule.layer === 'wall' ? 'WALL' : 'BG';
+        card.appendChild(layer);
+        
+        // Reorder buttons
+        const reorderBtns = document.createElement('div');
+        reorderBtns.className = 'rule-reorder-btns';
+        
+        const btnUp = document.createElement('button');
+        btnUp.className = 'btn-reorder';
+        btnUp.textContent = '▲';
+        btnUp.title = 'Move up';
+        btnUp.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.moveCorridorRule(rule.id, -1);
+        });
+        reorderBtns.appendChild(btnUp);
+        
+        const btnDown = document.createElement('button');
+        btnDown.className = 'btn-reorder';
+        btnDown.textContent = '▼';
+        btnDown.title = 'Move down';
+        btnDown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.moveCorridorRule(rule.id, 1);
+        });
+        reorderBtns.appendChild(btnDown);
+        
+        card.appendChild(reorderBtns);
+        
+        // Click to edit
+        card.addEventListener('click', () => this.openCorridorRuleEditor(rule));
+        
+        return card;
+    },
+    
+    /**
+     * Add a new corridor tile rule
+     */
+    addCorridorRule() {
+        const newRule = {
+            id: 'corridor_rule_' + Date.now(),
+            name: 'New Corridor Rule',
+            tile: 'Brick',
+            layer: 'wall',
+            conditions: {
+                type: 'AND',
+                conditions: []
+            }
+        };
+        
+        BiomeData.addCorridorTileRule(newRule);
+        Persistence.markDirty();
+        this.renderCorridorRules();
+        this.openCorridorRuleEditor(newRule);
+    },
+    
+    /**
+     * Move a corridor rule up or down
+     */
+    moveCorridorRule(ruleId, direction) {
+        const moved = BiomeData.moveCorridorTileRule(ruleId, direction);
+        if (moved) {
+            Persistence.markDirty();
+            this.renderCorridorRules();
+            this.triggerPreview();
+        }
+    },
+    
+    /**
+     * Open the inline editor for a corridor rule
+     */
+    openCorridorRuleEditor(rule) {
+        // Close any existing editor
+        if (this.editingBiome) {
+            this.closeModal();
+        }
+        
+        this.editingCorridorRule = rule;
+        this.editingType = 'corridor';
+        
+        // Use the inline workspace
+        BlockSystem.setWorkspace('block-palette', 'block-workspace');
+        
+        // Set title
+        this.editorTitleEl.textContent = 'Edit Corridor Rule';
+        
+        // Set name
+        this.editorNameInput.value = rule?.name || '';
+        
+        // Populate tile select
+        this.editorTileSelect.innerHTML = '';
+        const categories = ['TERRAIN', 'DUNGEON', 'MECHANICAL', 'SPECIAL', 'BG', 'FAR_BG'];
+        for (const cat of categories) {
+            const tiles = TileAtlas.getTilesByCategory(cat);
+            if (tiles.length > 0) {
+                const optGroup = document.createElement('optgroup');
+                optGroup.label = cat;
+                for (const tile of tiles) {
+                    const opt = document.createElement('option');
+                    opt.value = tile.name.replace(/ /g, '_');
+                    opt.textContent = tile.name;
+                    if (rule?.tile === tile.name.replace(/ /g, '_')) opt.selected = true;
+                    optGroup.appendChild(opt);
+                }
+                this.editorTileSelect.appendChild(optGroup);
+            }
+        }
+        
+        // Set layer (corridor uses 'wall' and 'bg')
+        this.editorLayerSelect.innerHTML = `
+            <option value="wall">Wall (corridor border)</option>
+            <option value="bg">Background (inside corridor)</option>
+        `;
+        this.editorLayerSelect.value = rule?.layer || 'wall';
+        
+        // Load conditions into block editor
+        BlockSystem.loadRules(rule?.conditions || { type: 'AND', conditions: [] }, rule?.id);
+        
+        // Hide other sidebar sections, show editor (full takeover)
+        this.setSidebarMode('editor');
+    },
+    
+    /**
+     * Save the currently editing corridor rule
+     */
+    saveCorridorRule() {
+        if (!this.editingCorridorRule) return;
+        
+        const updates = {
+            name: this.editorNameInput.value,
+            tile: this.editorTileSelect.value,
+            layer: this.editorLayerSelect.value,
+            // BlockSystem.getConditions() already returns { type: 'AND', conditions: [...] }
+            conditions: BlockSystem.getConditions()
+        };
+        
+        BiomeData.updateCorridorTileRule(this.editingCorridorRule.id, updates);
+        Persistence.markDirty();
+    },
+    
+    /**
+     * Delete the currently editing corridor rule
+     */
+    deleteCorridorRule() {
+        if (!this.editingCorridorRule) return;
+        
+        if (confirm('Delete this corridor rule?')) {
+            BiomeData.removeCorridorTileRule(this.editingCorridorRule.id);
+            Persistence.markDirty();
+            this.closeEditor();
+            this.renderCorridorRules();
+            this.triggerPreview();
+        }
+    },
+    
+    // =====================
     // INLINE TILE RULE EDITOR
     // =====================
     
@@ -852,12 +1200,14 @@ const BiomeEditor = {
      */
     closeEditor() {
         this.editingTileRule = null;
+        this.editingCorridorRule = null;
         this.editingType = null;
         
         // Show normal sidebar sections, hide editor
         this.setSidebarMode('normal');
         BlockSystem.clear();
         this.renderTileRules();
+        this.renderCorridorRules();
     },
     
     /**
@@ -870,6 +1220,7 @@ const BiomeEditor = {
             this.headerEl?.classList.add('hidden');
             this.biomesSectionEl?.classList.add('hidden');
             this.tileRulesSectionEl?.classList.add('hidden');
+            this.corridorSectionEl?.classList.add('hidden');
             // Show editor
             this.editorEl?.classList.remove('hidden');
         } else {
@@ -877,6 +1228,7 @@ const BiomeEditor = {
             this.headerEl?.classList.remove('hidden');
             this.biomesSectionEl?.classList.remove('hidden');
             this.tileRulesSectionEl?.classList.remove('hidden');
+            this.corridorSectionEl?.classList.remove('hidden');
             // Hide editor
             this.editorEl?.classList.add('hidden');
         }
@@ -886,6 +1238,14 @@ const BiomeEditor = {
      * Handle changes in the inline editor - save and preview
      */
     onEditorChange() {
+        // Handle corridor rule editing
+        if (this.editingType === 'corridor' && this.editingCorridorRule) {
+            this.saveCorridorRule();
+            this.triggerPreview();
+            return;
+        }
+        
+        // Handle biome tile rule editing
         if (!this.editingTileRule || !this.selectedBiome) return;
         
         // Get current values
@@ -915,6 +1275,13 @@ const BiomeEditor = {
      * Delete the currently editing rule
      */
     deleteCurrentRule() {
+        // Handle corridor rule deletion
+        if (this.editingType === 'corridor' && this.editingCorridorRule) {
+            this.deleteCorridorRule();
+            return;
+        }
+        
+        // Handle biome tile rule deletion
         if (!this.editingTileRule || !this.selectedBiome) return;
         
         if (confirm(`Delete rule "${this.editingTileRule.name}"?`)) {

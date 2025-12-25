@@ -71,11 +71,19 @@ const Camera = {
         this.x += (this.targetX - this.x) * factor;
         this.y += (this.targetY - this.y) * factor;
         
-        // Handle zoom input
+        // Handle zoom input (mouse wheel)
         const wheelDelta = Input.getWheelDelta();
         if (wheelDelta !== 0) {
             const zoomFactor = wheelDelta > 0 ? 0.9 : 1.1;
             this.setZoom(this.zoom * zoomFactor);
+        }
+        
+        // Handle zoom input (keyboard: - to zoom out, = to zoom in)
+        if (Input.isKeyPressed('-')) {
+            this.setZoom(this.zoom * 0.8);
+        }
+        if (Input.isKeyPressed('=') || Input.isKeyPressed('+')) {
+            this.setZoom(this.zoom * 1.25);
         }
     },
     

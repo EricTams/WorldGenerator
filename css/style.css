@@ -1094,3 +1094,406 @@ html, body {
     background: var(--bg-hover);
 }
 
+/* =====================
+   GENERATION MODE SELECT
+   ===================== */
+
+.gen-mode-select {
+    background: var(--bg-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.gen-mode-select:hover {
+    border-color: var(--text-muted);
+}
+
+/* =====================
+   ROOM UPLOAD MODAL
+   ===================== */
+
+.room-upload-content {
+    width: 500px;
+    max-width: 90vw;
+}
+
+.room-drop-zone {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.room-drop-zone:hover {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.05);
+}
+
+.room-drop-zone.drag-over {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.drop-icon {
+    font-size: 48px;
+    opacity: 0.7;
+}
+
+.drop-hint {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.drop-info {
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-top: 8px;
+}
+
+.room-preview-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.room-preview-section.hidden {
+    display: none;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.preview-header h4 {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#room-preview-info {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.room-preview-canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 300px;
+    margin: 0 auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    image-rendering: pixelated;
+}
+
+.preview-stats {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.room-name-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.room-name-field label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.room-name-field input {
+    flex: 1;
+}
+
+/* ========================================
+   Hub & Spokes Editor Styles
+   ======================================== */
+
+#hub-rules-content {
+    /* Shown by default when Hub mode is active */
+}
+
+.hub-rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.hub-rule-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--bg-light);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.hub-rule-tile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+}
+
+.hub-rule-preview {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    background: var(--bg-dark);
+    image-rendering: pixelated;
+}
+
+.hub-rule-name {
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.hub-rule-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    background: var(--bg-medium);
+    border-radius: 6px;
+    border: 1px dashed var(--border-color);
+}
+
+/* Tile Selector Modal */
+.hub-tile-selector-content {
+    max-width: 500px;
+    max-height: 80vh;
+}
+
+.hub-tile-selector-content .modal-body {
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.hub-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.hub-tile-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    background: var(--bg-light);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.hub-tile-option:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-blue);
+}
+
+.hub-tile-preview-large {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--bg-dark);
+    image-rendering: pixelated;
+}
+
+.hub-tile-name {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Room templates list in Hub editor */
+.hub-rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.hub-room-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-light);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.hub-room-name {
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.hub-room-size {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.hub-room-openings {
+    font-size: 11px;
+    color: var(--accent-blue);
+}
+
+/* =====================
+   CORRIDOR RULES SECTION
+   ===================== */
+
+.corridor-rules-section {
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-header-collapsible {
+    cursor: pointer;
+    user-select: none;
+}
+
+.section-header-collapsible:hover {
+    background: var(--bg-hover);
+    margin: -12px -16px;
+    padding: 12px 16px;
+}
+
+.section-header-collapsible .section-header-buttons {
+    margin-left: auto;
+    margin-right: 8px;
+}
+
+.collapse-indicator {
+    font-size: 10px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+}
+
+.corridor-rules-section.collapsed .collapse-indicator {
+    transform: rotate(-90deg);
+}
+
+.corridor-rules-section.collapsed .corridor-rules-content {
+    display: none;
+}
+
+.corridor-rules-content {
+    margin-top: 12px;
+}
+
+.corridor-shape-config {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.corridor-slider {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.corridor-slider label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.corridor-slider label span {
+    color: var(--accent-blue);
+    font-weight: 600;
+}
+
+.corridor-slider input[type="range"] {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bg-hover);
+    appearance: none;
+    cursor: pointer;
+}
+
+.corridor-slider input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.corridor-slider input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.corridor-slider input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    cursor: pointer;
+}
+
+.corridor-rules-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Corridor rule card - layer indicator */
+.rule-card .layer-badge {
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.layer-badge.wall {
+    background: rgba(163, 113, 247, 0.2);
+    color: var(--accent-purple);
+}
+
+.layer-badge.bg {
+    background: rgba(88, 166, 255, 0.2);
+    color: var(--accent-blue);
+}
+

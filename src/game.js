@@ -15,7 +15,7 @@ const Game = {
     
     // State
     initialized: false,
-    seed: 12345,
+    seed: Math.floor(Math.random() * 100000),  // Random seed on startup
     roomCount: 20,
     showBiomes: false,
     noiseOverlay: null, // which noise to visualize (null = off, 'dynamic' = follow hover)
@@ -66,7 +66,7 @@ const Game = {
             this.camera.snapToTarget();
             
             // Initialize editor systems
-            this.initEditor();
+            await this.initEditor();
             
             // Set up UI event handlers
             this.setupUI();
@@ -92,14 +92,20 @@ const Game = {
     /**
      * Initialize editor systems
      */
-    initEditor() {
+    async initEditor() {
         // Initialize persistence (load saved data)
         Persistence.init();
         
         // Initialize tile palette
         TilePalette.init('tile-palette');
         
-        // Initialize biome editor
+        // Initialize room templates system (auto-loads from localStorage)
+        RoomTemplates.init();
+        
+        // Initialize room upload modal
+        await RoomUpload.init();
+        
+        // Initialize biome editor (used for both Noise and Hub modes)
         BiomeEditor.init();
         
         // Initialize block system
@@ -121,7 +127,7 @@ const Game = {
         if (seedInput) {
             seedInput.value = this.seed;
             seedInput.addEventListener('change', (e) => {
-                this.seed = parseInt(e.target.value) || 12345;
+                this.seed = parseInt(e.target.value) || Math.floor(Math.random() * 100000);
             });
         }
         
@@ -203,6 +209,24 @@ const Game = {
                 }
             });
         }
+        
+        // Generation mode selector
+        const genModeSelect = document.getElementById('gen-mode-select');
+        if (genModeSelect) {
+            genModeSelect.value = Dungeon.generationMode;
+            genModeSelect.addEventListener('change', (e) => {
+                Dungeon.generationMode = e.target.value;
+                console.log(`Generation mode set to: ${Dungeon.generationMode}`);
+            });
+        }
+        
+        // Room upload button
+        const btnUploadRoom = document.getElementById('btn-upload-room');
+        if (btnUploadRoom) {
+            btnUploadRoom.addEventListener('click', () => {
+                RoomUpload.show();
+            });
+        }
     },
     
     /**
@@ -211,11 +235,29 @@ const Game = {
      * This allows live preview of rule changes without jumping around
      */
     regenerate() {
-        // If no rules loaded, create empty world
+        // Both modes use BiomeData rules for tile selection
         if (!BiomeData.rulesLoaded) {
             console.log('No rules loaded - creating empty world');
             this.world.create({ tiles: [], bgTiles: [], biomeMap: [], spawnPoint: { x: 0, y: 0 } });
             return;
+        }
+        
+        // Hub & Spokes mode also needs room templates
+        if (Dungeon.generationMode === 'hub') {
+            const templates = RoomTemplates.getAllTemplates();
+            if (templates.length === 0) {
+                // AIDEV-NOTE: Gracefully fall back to noise mode instead of blocking
+                console.log('No room templates loaded - falling back to Noise generation');
+                console.log('Upload rooms via "📁 Rooms" button to use Hub & Spokes mode');
+                Dungeon.generationMode = 'noise';
+                // Continue to noise generation below
+            } else {
+                console.log(`Regenerating Hub & Spokes with seed ${this.seed}, ${templates.length} templates`);
+                const dungeonData = Dungeon.generate(this.seed);
+                this.world.create(dungeonData);
+                // AIDEV-NOTE: Don't move camera on regenerate - preserves view during live preview
+                return;
+            }
         }
         
         console.log(`Regenerating dungeon with seed ${this.seed}, ${this.roomCount} rooms`);
@@ -232,18 +274,19 @@ const Game = {
      * @param {number} dt - Delta time in seconds
      */
     update(dt) {
-        // Process input
-        Input.update();
-        
-        // Update player
+        // Update player (reads input)
         this.player.update(dt, Input);
         
-        // Update camera to follow player
+        // Update camera to follow player (reads input for zoom)
         this.camera.setTarget(this.player.x, this.player.y);
         this.camera.update(dt);
         
         // Update status bar
         this.updateStatusBar();
+        
+        // Clear one-frame input states AFTER everything has processed them
+        // AIDEV-NOTE: This must be last - keysPressed/wheel are cleared here
+        Input.update();
     },
     
     /**

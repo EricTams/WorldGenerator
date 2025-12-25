@@ -98,20 +98,23 @@ const Persistence = {
     
     /**
      * Save to localStorage
+     * AIDEV-NOTE: Includes biomes, corridor config, and corridor tile rules
      */
     save() {
         try {
-            // Include version in saved data
+            // Include version and all rule data
             const data = {
                 version: BiomeData.DEFAULTS_VERSION,
                 biomeOrder: BiomeData.biomeOrder,
-                biomes: BiomeData.biomes
+                biomes: BiomeData.biomes,
+                corridorConfig: BiomeData.corridorConfig,
+                corridorTileRules: BiomeData.corridorTileRules
             };
             const json = JSON.stringify(data, null, 2);
             localStorage.setItem(this.STORAGE_KEY, json);
             this.savedVersion = BiomeData.DEFAULTS_VERSION;
             this.isDirty = false;
-            console.log(`Biomes saved to localStorage (v${this.savedVersion})`);
+            console.log(`Rules saved to localStorage (v${this.savedVersion})`);
         } catch (e) {
             console.error('Failed to save:', e);
         }

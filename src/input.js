@@ -68,8 +68,8 @@ const Input = {
         this.keys[key] = true;
         
         // Prevent default for game keys
-        // WASD = pan, IJKL = jump by cell
-        if (['w', 'a', 's', 'd', 'i', 'j', 'k', 'l', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(key)) {
+        // WASD = pan, IJKL = jump by cell, -/= = zoom
+        if (['w', 'a', 's', 'd', 'i', 'j', 'k', 'l', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', '-', '=', '+'].includes(key)) {
             e.preventDefault();
         }
     },

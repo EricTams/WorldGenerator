@@ -90,6 +90,50 @@
                     </div>
                     <p class="hint-text">Select a biome to see its tile rules</p>
                 </div>
+                
+                <!-- Corridor Rules: Shape and tile rules for Hub & Spokes corridors -->
+                <div class="editor-section corridor-rules-section">
+                    <div class="section-header section-header-collapsible" id="corridor-section-header">
+                        <h3>🚇 Corridor Rules</h3>
+                        <div class="section-header-buttons">
+                            <button id="btn-add-corridor-rule" class="btn btn-small">+ Rule</button>
+                        </div>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                    <div id="corridor-rules-content" class="corridor-rules-content">
+                        <!-- Shape Config Sliders -->
+                        <div class="corridor-shape-config">
+                            <div class="corridor-slider">
+                                <label>Width: <span id="corridor-width-value">3</span></label>
+                                <input type="range" id="corridor-width" min="1" max="7" value="3">
+                            </div>
+                            <div class="corridor-slider">
+                                <label>Waviness: <span id="corridor-noise-value">4</span></label>
+                                <input type="range" id="corridor-noise" min="0" max="10" value="4">
+                            </div>
+                            <div class="corridor-slider">
+                                <label>Width Variation: <span id="corridor-variation-value">2</span></label>
+                                <input type="range" id="corridor-variation" min="0" max="4" value="2">
+                            </div>
+                        </div>
+                        <!-- Cave Carving Config -->
+                        <div class="corridor-shape-config cave-config">
+                            <div class="config-label">Cave Carving</div>
+                            <div class="corridor-slider">
+                                <label>Distance: <span id="cave-distance-value">12</span></label>
+                                <input type="range" id="cave-distance" min="0" max="24" value="12">
+                            </div>
+                            <div class="corridor-slider">
+                                <label>Roughness: <span id="cave-roughness-value">4</span></label>
+                                <input type="range" id="cave-roughness" min="0" max="10" value="4">
+                            </div>
+                        </div>
+                        <!-- Corridor Tile Rules List -->
+                        <div id="corridor-tile-rules-list" class="rules-list corridor-rules-list">
+                            <!-- Corridor tile rule cards -->
+                        </div>
+                    </div>
+                </div>
             
                 <!-- Inline Rule Editor (replaces modal) -->
                 <div id="rule-editor" class="editor-section rule-editor hidden">
@@ -186,11 +230,16 @@
         
         <!-- Generation Controls -->
         <div id="gen-controls" class="gen-controls">
+            <select id="gen-mode-select" class="gen-mode-select">
+                <option value="noise">Noise Gen</option>
+                <option value="hub" selected>Hub & Spokes</option>
+            </select>
             <label>
                 Seed: <input type="text" id="seed-input" value="12345" size="10">
             </label>
             <button id="btn-regenerate" class="btn btn-primary">Regenerate</button>
             <span class="control-divider">|</span>
+            <button id="btn-upload-room" class="btn btn-secondary btn-small" title="Upload room template">📁 Rooms</button>
             <button id="btn-biome-overlay" class="btn btn-secondary btn-small">Biomes</button>
             <select id="noise-overlay-select" class="noise-select">
                 <option value="">Noise: Off</option>
@@ -222,6 +271,9 @@
     <script src="assets/tile_atlas_data.js"></script>
     <script src="src/noise.js"></script>
     <script src="src/biome_data.js"></script>
+    <script src="src/default_rooms.js"></script>
+    <script src="src/room_templates.js"></script>
+    <script src="src/dungeon_graph.js"></script>
     <script src="src/dungeon.js"></script>
     <script src="src/world.js"></script>
     <script src="src/camera.js"></script>
@@ -230,6 +282,7 @@
     <script src="src/renderer.js"></script>
     <script src="src/editor/blocks.js"></script>
     <script src="src/editor/tile_palette.js"></script>
+    <script src="src/editor/room_upload.js"></script>
     <script src="src/editor/biome_editor.js"></script>
     <script src="src/editor/persistence.js"></script>
     <script src="src/game_loop.js"></script>
